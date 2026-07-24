@@ -67,7 +67,7 @@ Controller chỉ nhận request, validate, gọi Service tương ứng, KHÔNG c
 - **Spring Data JPA Repositories**: thao tác với PostgreSQL/MySQL
 - **Redis Memory Database**: bộ nhớ đệm (caching) cho danh sách bác sĩ & slot rảnh
 - **Message Queue / Async Task**: xử lý gửi email bất đồng bộ (nhận task từ Booking Processing Engine)
-- **PostgreSQL / MySQL**: lưu Users, Schedules, Appointments...
+- **MySQL**: lưu Users, Schedules, Appointments...
 
 ## Luồng xử lý tổng quát
 
