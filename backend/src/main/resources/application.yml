@@ -1,18 +1,18 @@
 # =====================================================================
 # application.yml — DatLichKhamBenh Backend
-# Tất cả credential nhạy cảm để dạng placeholder ${ENV_VAR:default}
-# KHÔNG hardcode password / secret vào file này.
+# Clone về → Run ngay: DB tự tạo, bảng tự sinh, seed data tự load.
 # =====================================================================
 
 spring:
   application:
     name: datlichkhambenh-backend
 
-  # ─── PostgreSQL ───────────────────────────────────────────────────
+  # ─── MySQL ───────────────────────────────────────────────────────
   datasource:
-    url: ${DB_URL:jdbc:mysql://localhost:3306/datlichkhambenh?useSSL=false&serverTimezone=Asia/Ho_Chi_Minh&allowPublicKeyRetrieval=true&characterEncoding=UTF-8}
+    # createDatabaseIfNotExist=true → tự tạo DB nếu chưa có
+    url: ${DB_URL:jdbc:mysql://localhost:3307/datlichkhambenh?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=Asia/Ho_Chi_Minh&allowPublicKeyRetrieval=true&characterEncoding=UTF-8}
     username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:}
+    password: ${DB_PASSWORD:root}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       maximum-pool-size: ${DB_POOL_SIZE:10}
@@ -22,12 +22,22 @@ spring:
   # ─── JPA / Hibernate ─────────────────────────────────────────────
   jpa:
     hibernate:
-      ddl-auto: ${JPA_DDL_AUTO:validate}   # production: validate; dev: update
+      # update → Hibernate tự tạo/cập nhật bảng theo Entity Java
+      ddl-auto: ${JPA_DDL_AUTO:update}
     show-sql: ${JPA_SHOW_SQL:false}
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
         format_sql: true
+    # Phải true để schema.sql chạy SAU KHI Hibernate tạo xong bảng
+    defer-datasource-initialization: true
+
+  # ─── SQL Initialization (schema.sql + data.sql) ──────────────────
+  sql:
+    init:
+      # DatabaseInitializer (CommandLineRunner) handles seeding with valid BCrypt hashes
+      mode: never
+      encoding: UTF-8
 
   # ─── Redis ───────────────────────────────────────────────────────
   data:
@@ -55,7 +65,7 @@ spring:
           starttls:
             enable: true
 
-  # ─── Async (dùng cho AsyncEmailNotificationService) ──────────────
+  # ─── Async Task Executor ──────────────────────────────────────────
   task:
     execution:
       pool:
@@ -74,13 +84,13 @@ server:
 app:
   jwt:
     secret: ${JWT_SECRET:CHANGE_ME_IN_PRODUCTION_USE_AT_LEAST_256BIT_SECRET}
-    expiration-ms: ${JWT_EXPIRATION_MS:86400000}      # 24 hours default
-    refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:604800000}  # 7 days
+    expiration-ms: ${JWT_EXPIRATION_MS:86400000}         # 24 giờ
+    refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:604800000}  # 7 ngày
 
-  # ─── Redis Cache TTL (seconds) ───────────────────────────────────
+  # ─── Redis Cache TTL (giây) ──────────────────────────────────────
   cache:
-    doctor-list-ttl: ${CACHE_DOCTOR_LIST_TTL:300}       # 5 minutes
-    available-slots-ttl: ${CACHE_AVAILABLE_SLOTS_TTL:60} # 1 minute
+    doctor-list-ttl: ${CACHE_DOCTOR_LIST_TTL:300}          # 5 phút
+    available-slots-ttl: ${CACHE_AVAILABLE_SLOTS_TTL:60}   # 1 phút
 
 # ─── Actuator ────────────────────────────────────────────────────────
 management:

@@ -1,40 +1,41 @@
 package com.datlichkhambenh.backend.dto.response;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import lombok.Getter;
+import lombok.*;
 
-/**
- * Generic API response wrapper.
- * Moi endpoint deu tra ve dang chuan nay de frontend de xu ly.
- *
- * Thanh cong:  { "success": true,  "data": {...}, "message": null }
- * That bai:    { "success": false, "data": null,  "message": "Loi..." }
- *
- * Su dung static factory thay vi @Builder de tranh van de Lombok generic type.
- */
+import java.time.LocalDateTime;
+
 @Getter
-@JsonInclude(JsonInclude.Include.NON_NULL)
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class ApiResponseDto<T> {
 
-    private final boolean success;
-    private final T data;
-    private final String message;
+    private boolean success;
+    private String message;
+    private T data;
+    @Builder.Default
+    private LocalDateTime timestamp = LocalDateTime.now();
 
-    private ApiResponseDto(boolean success, T data, String message) {
-        this.success = success;
-        this.data = data;
-        this.message = message;
+    public static <T> ApiResponseDto<T> success(T data, String message) {
+        return ApiResponseDto.<T>builder()
+                .success(true)
+                .message(message)
+                .data(data)
+                .timestamp(LocalDateTime.now())
+                .build();
     }
 
-    public static <T> ApiResponseDto<T> ok(T data) {
-        return new ApiResponseDto<>(true, data, null);
-    }
-
-    public static <T> ApiResponseDto<T> ok(T data, String message) {
-        return new ApiResponseDto<>(true, data, message);
+    public static <T> ApiResponseDto<T> success(T data) {
+        return success(data, "Thành công");
     }
 
     public static <T> ApiResponseDto<T> error(String message) {
-        return new ApiResponseDto<>(false, null, message);
+        return ApiResponseDto.<T>builder()
+                .success(false)
+                .message(message)
+                .data(null)
+                .timestamp(LocalDateTime.now())
+                .build();
     }
 }

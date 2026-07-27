@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Đăng Nhập - DatLichKhamBenh</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="auth-container">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <div class="logo-icon">⚡</div>
+        <h1>Đăng Nhập Hệ Thống</h1>
+        <p>Chọn tài khoản Demo hoặc nhập email/mật khẩu</p>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">🔥 Đăng nhập nhanh (Tài khoản mẫu):</label>
+        <div class="grid grid-3 gap-1">
+          <button onclick="fillDemo('admin@clinic.vn', 'Admin@123')" class="btn btn-ghost btn-sm">🔑 Admin</button>
+          <button onclick="fillDemo('bs.nguyenvana@clinic.vn', 'Doctor@123')" class="btn btn-ghost btn-sm">👨‍⚕️ Bác Sĩ</button>
+          <button onclick="fillDemo('bn.hoangminh@gmail.com', 'Patient@123')" class="btn btn-ghost btn-sm">🤒 Bệnh Nhân</button>
+        </div>
+      </div>
+
+      <div class="auth-divider"><span>HOẶC</span></div>
+
+      <form id="login-form">
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" id="email" class="form-control" placeholder="name@example.com" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Mật khẩu</label>
+          <input type="password" id="password" class="form-control" placeholder="••••••••" required>
+        </div>
+
+        <button type="submit" id="btn-submit" class="btn btn-primary w-full btn-lg mt-1">Đăng Nhập</button>
+      </form>
+
+      <div class="auth-footer">
+        Chưa có tài khoản? <a href="/register.html">Đăng ký ngay</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/js/auth.js"></script>
+  <script>
+    function fillDemo(email, pass) {
+      document.getElementById('email').value = email;
+      document.getElementById('password').value = pass;
+    }
+
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('btn-submit');
+      btn.disabled = true;
+      btn.innerHTML = '<div class="spinner"></div> Đang xử lý...';
+
+      try {
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+
+        const res = await Api.auth.login({ email, password });
+        Auth.setSession(res.data);
+        Utils.showToast('Đăng nhập thành công!', 'success');
+        setTimeout(() => Auth.redirectByRole(res.data.role), 600);
+      } catch (err) {
+        Utils.showToast(err.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = 'Đăng Nhập';
+      }
+    });
+  </script>
+</body>
+</html>

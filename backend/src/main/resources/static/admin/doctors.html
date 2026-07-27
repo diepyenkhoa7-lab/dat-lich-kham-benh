@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Duyệt Bác Sĩ Mới - DatLichKhamBenh</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="logo">⚡</div>
+        <span>Quản Trị Viên</span>
+      </div>
+      <div class="sidebar-section">Menu</div>
+      <a href="/admin/dashboard.html" class="sidebar-link"><span class="icon">📊</span> Thống Kê Tổng Quan</a>
+      <a href="/admin/doctors.html" class="sidebar-link active"><span class="icon">👨‍⚕️</span> Duyệt Bác Sĩ Mới</a>
+      <a href="/admin/specialties.html" class="sidebar-link"><span class="icon">🏥</span> Quản Lý Chuyên Khoa</a>
+      
+      <div class="sidebar-footer">
+        <button onclick="Auth.logout()" class="btn btn-ghost btn-sm w-full">Đăng xuất</button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div class="page-header">
+        <h1 class="page-title">Phê Duyệt Tài Khoản Bác Sĩ Mới</h1>
+        <p class="page-subtitle">Kiểm tra thông tin bác sĩ đăng ký trước khi cho phép hoạt động</p>
+      </div>
+
+      <div class="card">
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Họ & Tên</th>
+                <th>Email</th>
+                <th>SĐT</th>
+                <th>Kinh Nghiệm</th>
+                <th>Giá Khám</th>
+                <th>Thao Tác</th>
+              </tr>
+            </thead>
+            <tbody id="pending-doctors">
+              <tr><td colspan="7"><div class="spinner"></div> Đang tải...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/js/auth.js"></script>
+  <script>
+    Auth.checkAuth(['ADMIN']);
+
+    async function loadPendingDoctors() {
+      const tbody = document.getElementById('pending-doctors');
+      try {
+        const res = await Api.admin.pendingDoctors();
+        const list = res.data || [];
+
+        if (list.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" class="text-center p-3">Không có bác sĩ nào đang chờ phê duyệt.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = list.map(item => `
+          <tr>
+            <td><strong>#${item.id}</strong></td>
+            <td><strong>${item.fullName}</strong></td>
+            <td>${item.email}</td>
+            <td>${item.phone || '-'}</td>
+            <td>${item.experienceYears} năm</td>
+            <td>${Utils.formatCurrency(item.consultationFee)}</td>
+            <td>
+              <button onclick="approveDoctor(${item.id})" class="btn btn-success btn-sm">✓ Phê Duyệt</button>
+              <button onclick="rejectDoctor(${item.id})" class="btn btn-danger btn-sm">✗ Từ Chối</button>
+            </td>
+          </tr>
+        `).join('');
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-error p-3">${err.message}</td></tr>`;
+      }
+    }
+
+    async function approveDoctor(id) {
+      try {
+        await Api.admin.approveDoctor(id);
+        Utils.showToast('Phê duyệt bác sĩ thành công!', 'success');
+        loadPendingDoctors();
+      } catch (err) {
+        Utils.showToast(err.message, 'error');
+      }
+    }
+
+    async function rejectDoctor(id) {
+      try {
+        await Api.admin.rejectDoctor(id);
+        Utils.showToast('Đã từ chối bác sĩ', 'info');
+        loadPendingDoctors();
+      } catch (err) {
+        Utils.showToast(err.message, 'error');
+      }
+    }
+
+    loadPendingDoctors();
+  </script>
+</body>
+</html>

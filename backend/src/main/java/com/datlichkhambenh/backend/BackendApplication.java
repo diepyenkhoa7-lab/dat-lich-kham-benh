@@ -8,7 +8,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
  * Entry point của DatLichKhamBenh Backend.
  *
  * @EnableAsync — bật xử lý bất đồng bộ cho AsyncEmailNotificationService
- *               (gửi email xác nhận / nhắc lịch không block luồng đặt lịch).
+ *              (gửi email xác nhận / nhắc lịch không block luồng đặt lịch).
  */
 @SpringBootApplication
 @EnableAsync

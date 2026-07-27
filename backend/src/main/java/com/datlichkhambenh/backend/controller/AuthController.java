@@ -1,25 +1,44 @@
 package com.datlichkhambenh.backend.controller;
 
+import com.datlichkhambenh.backend.dto.request.LoginRequestDto;
+import com.datlichkhambenh.backend.dto.request.RefreshTokenRequestDto;
+import com.datlichkhambenh.backend.dto.request.RegisterRequestDto;
+import com.datlichkhambenh.backend.dto.response.ApiResponseDto;
+import com.datlichkhambenh.backend.dto.response.LoginResponseDto;
+import com.datlichkhambenh.backend.dto.response.UserDto;
+import com.datlichkhambenh.backend.service.AuthService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * AuthController — Xử lý đăng ký, đăng nhập, cấp token.
- * Base path: /api/v1/auth
- *
- * Endpoint này KHÔNG yêu cầu JWT (public endpoint).
- * Controller chỉ nhận request, validate DTO, gọi AuthService — KHÔNG viết business logic.
- *
- * Logic nghiệp vụ sẽ được bổ sung ở bước tiếp theo.
- */
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
 public class AuthController {
 
-    // TODO: inject AuthService
-    // TODO: POST /register  → authService.register(request)
-    // TODO: POST /login     → authService.login(request)
-    // TODO: POST /refresh   → authService.refreshToken(token)
+    private final AuthService authService;
+
+    @PostMapping("/register")
+    public ResponseEntity<ApiResponseDto<UserDto>> register(@Valid @RequestBody RegisterRequestDto request) {
+        UserDto user = authService.register(request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponseDto.success(user, "Đăng ký tài khoản thành công"));
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<ApiResponseDto<LoginResponseDto>> login(@Valid @RequestBody LoginRequestDto request) {
+        LoginResponseDto response = authService.login(request);
+        return ResponseEntity.ok(ApiResponseDto.success(response, "Đăng nhập thành công"));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<ApiResponseDto<LoginResponseDto>> refreshToken(@Valid @RequestBody RefreshTokenRequestDto request) {
+        LoginResponseDto response = authService.refreshToken(request);
+        return ResponseEntity.ok(ApiResponseDto.success(response, "Làm mới token thành công"));
+    }
 }

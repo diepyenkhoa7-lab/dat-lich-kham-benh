@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - DatLichKhamBenh</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="logo">⚡</div>
+        <span>Quản Trị Viên</span>
+      </div>
+      <div class="sidebar-section">Menu</div>
+      <a href="dashboard.html" class="sidebar-link active"><span class="icon">📊</span> Thống Kê Tổng Quan</a>
+      <a href="doctors.html" class="sidebar-link"><span class="icon">👨‍⚕️</span> Duyệt Bác Sĩ Mới</a>
+      <a href="specialties.html" class="sidebar-link"><span class="icon">🏥</span> Quản Lý Chuyên Khoa</a>
+      
+      <div class="sidebar-footer">
+        <button onclick="Auth.logout()" class="btn btn-ghost btn-sm w-full">Đăng xuất</button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div class="page-header">
+        <h1 class="page-title">Thống Kê Hệ Thống</h1>
+        <p class="page-subtitle">Tổng quan dữ liệu phòng khám thời gian thực</p>
+      </div>
+
+      <div class="grid grid-4 mb-3">
+        <div class="card stat-card">
+          <div class="stat-icon" style="background:var(--accent-glow);color:var(--accent);">👨‍⚕️</div>
+          <div class="stat-value" id="stat-doctors">-</div>
+          <div class="stat-label">Bác sĩ hoạt động</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-icon" style="background:var(--emerald-glow);color:var(--emerald);">😷</div>
+          <div class="stat-value" id="stat-patients">-</div>
+          <div class="stat-label">Bệnh nhân hệ thống</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-icon" style="background:rgba(245,158,11,0.15);color:var(--amber);">📅</div>
+          <div class="stat-value" id="stat-appointments">-</div>
+          <div class="stat-label">Tổng ca khám đã đặt</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-icon" style="background:rgba(244,63,94,0.15);color:var(--rose);">💵</div>
+          <div class="stat-value" id="stat-revenue">-</div>
+          <div class="stat-label">Doanh thu dự tính</div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="../js/api.js"></script>
+  <script src="../js/utils.js"></script>
+  <script src="../js/auth.js"></script>
+  <script>
+    Auth.checkAuth(['ADMIN']);
+
+    async function loadStats() {
+      try {
+        const res = await Api.admin.stats();
+        const stats = res.data || {};
+        document.getElementById('stat-doctors').innerText = stats.totalDoctors || 0;
+        document.getElementById('stat-patients').innerText = stats.totalPatients || 0;
+        document.getElementById('stat-appointments').innerText = stats.totalAppointments || 0;
+        document.getElementById('stat-revenue').innerText = Utils.formatCurrency(stats.totalRevenue || 0);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    loadStats();
+  </script>
+</body>
+</html>

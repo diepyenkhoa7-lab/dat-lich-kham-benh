@@ -64,7 +64,7 @@ Controller chỉ nhận request, validate, gọi Service tương ứng, KHÔNG c
 
 ## 5. Repository & Data Layer (Lưu trữ)
 
-- **Spring Data JPA Repositories**: thao tác với PostgreSQL/MySQL
+- **Spring Data JPA Repositories**: thao tác với SQL WorkBench / MySQL.
 - **Redis Memory Database**: bộ nhớ đệm (caching) cho danh sách bác sĩ & slot rảnh
 - **Message Queue / Async Task**: xử lý gửi email bất đồng bộ (nhận task từ Booking Processing Engine)
 - **MySQL**: lưu Users, Schedules, Appointments...

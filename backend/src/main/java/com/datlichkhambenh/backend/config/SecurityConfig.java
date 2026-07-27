@@ -18,16 +18,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-/**
- * SecurityConfig -- Cau hinh Spring Security.
- *
- * Quy tac (theo architecture.md):
- * - /api/v1/auth/** -> public (khong can JWT)
- * - Tat ca endpoint con lai -> yeu cau JWT + phan quyen theo role
- * - Session = STATELESS (dung JWT, khong dung server session)
- * - Password encoder = BCryptPasswordEncoder
- * - @EnableMethodSecurity -> dung @PreAuthorize tren Controller/Service
- */
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
@@ -48,9 +38,15 @@ public class SecurityConfig {
             .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                // 1. Công khai các API Auth & Actuator
                 .requestMatchers("/api/v1/auth/**").permitAll()
-                .requestMatchers("/actuator/health").permitAll()
-                .anyRequest().authenticated()
+                .requestMatchers("/actuator/**").permitAll()
+
+                // 2. Yêu cầu xác thực JWT cho tất cả REST API ngoại trừ auth
+                .requestMatchers("/api/v1/**").authenticated()
+
+                // 3. Công khai toàn bộ Giao diện tĩnh (HTML/CSS/JS/Images) ở mọi thư mục (root, patient, doctor, admin...)
+                .anyRequest().permitAll()
             )
             .authenticationProvider(authenticationProvider())
             .addFilterBefore(jwtTokenFilter, UsernamePasswordAuthenticationFilter.class);

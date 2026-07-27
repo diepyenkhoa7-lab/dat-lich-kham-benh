@@ -4,6 +4,7 @@ import com.datlichkhambenh.backend.entity.MedicalRecord;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -15,4 +16,7 @@ public interface MedicalRecordRepository extends JpaRepository<MedicalRecord, Lo
 
     // Lấy hồ sơ khám theo appointment (quan hệ 1-1 — luôn trả về tối đa 1 bản ghi)
     Optional<MedicalRecord> findByAppointmentId(Long appointmentId);
+
+    // Lấy danh sách hồ sơ khám của 1 bệnh nhân
+    List<MedicalRecord> findByAppointmentPatientUserId(Long patientUserId);
 }
