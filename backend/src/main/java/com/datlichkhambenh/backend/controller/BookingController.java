@@ -55,7 +55,7 @@ public class BookingController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('PATIENT', 'DOCTOR', 'ADMIN')")
+    @PreAuthorize("hasAnyAuthority('PATIENT', 'DOCTOR', 'ADMIN')")
     public ResponseEntity<ApiResponseDto<AppointmentDto>> getBookingDetails(@PathVariable("id") Long appointmentId) {
         AppointmentDto appointment = bookingService.getBookingDetails(appointmentId);
         return ResponseEntity.ok(ApiResponseDto.success(appointment));

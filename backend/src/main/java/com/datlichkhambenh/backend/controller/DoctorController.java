@@ -6,17 +6,14 @@ import com.datlichkhambenh.backend.dto.response.ApiResponseDto;
 import com.datlichkhambenh.backend.dto.response.AppointmentDto;
 import com.datlichkhambenh.backend.dto.response.DoctorDto;
 import com.datlichkhambenh.backend.dto.response.ScheduleDto;
-import com.datlichkhambenh.backend.entity.Appointment;
 import com.datlichkhambenh.backend.entity.Doctor;
-import com.datlichkhambenh.backend.entity.MedicalRecord;
 import com.datlichkhambenh.backend.entity.User;
 import com.datlichkhambenh.backend.exception.ResourceNotFoundException;
-import com.datlichkhambenh.backend.repository.AppointmentRepository;
 import com.datlichkhambenh.backend.repository.DoctorRepository;
-import com.datlichkhambenh.backend.repository.MedicalRecordRepository;
 import com.datlichkhambenh.backend.repository.UserRepository;
 import com.datlichkhambenh.backend.service.BookingService;
 import com.datlichkhambenh.backend.service.DoctorScheduleService;
+import com.datlichkhambenh.backend.service.MedicalRecordService;
 import com.datlichkhambenh.backend.service.RedisCacheService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -42,8 +39,7 @@ public class DoctorController {
     private final DoctorRepository doctorRepository;
     private final UserRepository userRepository;
     private final BookingService bookingService;
-    private final AppointmentRepository appointmentRepository;
-    private final MedicalRecordRepository medicalRecordRepository;
+    private final MedicalRecordService medicalRecordService;
 
     private Long getUserIdFromUserDetails(UserDetails userDetails) {
         return userRepository.findByEmail(userDetails.getUsername())
@@ -145,19 +141,7 @@ public class DoctorController {
     @PostMapping("/medical-records")
     @PreAuthorize("hasAuthority('DOCTOR')")
     public ResponseEntity<ApiResponseDto<Void>> updateMedicalRecord(@Valid @RequestBody UpdateMedicalRecordDto request) {
-        Appointment appointment = appointmentRepository.findById(request.getAppointmentId())
-                .orElseThrow(() -> new ResourceNotFoundException("Lịch hẹn không tồn tại"));
-
-        MedicalRecord record = medicalRecordRepository.findByAppointmentId(appointment.getId())
-                .orElseGet(() -> MedicalRecord.builder().appointment(appointment).build());
-
-        record.setDiagnosis(request.getDiagnosis());
-        record.setDoctorNotes(request.getDoctorNotes());
-        medicalRecordRepository.save(record);
-
-        appointment.setStatus("COMPLETED");
-        appointmentRepository.save(appointment);
-
+        medicalRecordService.updateMedicalRecord(request);
         return ResponseEntity.ok(ApiResponseDto.success(null, "Cập nhật kết quả chẩn đoán bệnh thành công"));
     }
 }
