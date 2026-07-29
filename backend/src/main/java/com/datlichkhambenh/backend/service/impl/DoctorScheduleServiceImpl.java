@@ -1,0 +1,97 @@
+package com.datlichkhambenh.backend.service.impl;
+
+import com.datlichkhambenh.backend.dto.request.CreateScheduleDto;
+import com.datlichkhambenh.backend.dto.response.ScheduleDto;
+import com.datlichkhambenh.backend.entity.Doctor;
+import com.datlichkhambenh.backend.entity.Schedule;
+import com.datlichkhambenh.backend.exception.AppException;
+import com.datlichkhambenh.backend.exception.ResourceNotFoundException;
+import com.datlichkhambenh.backend.repository.DoctorRepository;
+import com.datlichkhambenh.backend.repository.ScheduleRepository;
+import com.datlichkhambenh.backend.service.DoctorScheduleService;
+import com.datlichkhambenh.backend.service.RedisCacheService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+public class DoctorScheduleServiceImpl implements DoctorScheduleService {
+
+    private final ScheduleRepository scheduleRepository;
+    private final DoctorRepository doctorRepository;
+    private final RedisCacheService redisCacheService;
+
+    @Override
+    @Transactional
+    public ScheduleDto createSlot(Long doctorUserId, CreateScheduleDto request) {
+        Doctor doctor = doctorRepository.findById(doctorUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("Bác sĩ không tồn tại"));
+
+        if (!Boolean.TRUE.equals(doctor.getIsApproved())) {
+            throw new AppException("Tài khoản Bác sĩ chưa được Admin phê duyệt");
+        }
+
+        Schedule schedule = Schedule.builder()
+                .doctor(doctor)
+                .workDate(request.getWorkDate())
+                .startTime(request.getStartTime())
+                .endTime(request.getEndTime())
+                .isAvailable(true)
+                .build();
+
+        Schedule saved = scheduleRepository.save(schedule);
+
+        // Evict Redis cache cho bác sĩ & ngày làm việc này
+        redisCacheService.evictSlotCache(doctorUserId, request.getWorkDate());
+
+        return mapToDto(saved);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ScheduleDto> getAvailableSlots(Long doctorUserId, LocalDate date) {
+        // Pattern Cache-Aside: 1. Đọc từ Redis trước
+        List<ScheduleDto> cached = redisCacheService.getCachedAvailableSlots(doctorUserId, date);
+        if (cached != null) {
+            return cached;
+        }
+
+        // 2. Cache miss -> query DB
+        List<Schedule> slots = scheduleRepository.findByDoctorUserIdAndWorkDateAndIsAvailableTrue(doctorUserId, date);
+        List<ScheduleDto> result = slots.stream().map(this::mapToDto).collect(Collectors.toList());
+
+        // 3. Ghi lại vào Redis cache
+        redisCacheService.cacheAvailableSlots(doctorUserId, date, result);
+
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public void toggleSlotAvailability(Long scheduleId, boolean available) {
+        Schedule schedule = scheduleRepository.findById(scheduleId)
+                .orElseThrow(() -> new ResourceNotFoundException("Ca khám không tồn tại"));
+
+        schedule.setIsAvailable(available);
+        scheduleRepository.save(schedule);
+
+        redisCacheService.evictSlotCache(schedule.getDoctor().getUserId(), schedule.getWorkDate());
+    }
+
+    private ScheduleDto mapToDto(Schedule schedule) {
+        return ScheduleDto.builder()
+                .id(schedule.getId())
+                .doctorId(schedule.getDoctor().getUserId())
+                .doctorName(schedule.getDoctor().getFullName())
+                .workDate(schedule.getWorkDate())
+                .startTime(schedule.getStartTime())
+                .endTime(schedule.getEndTime())
+                .isAvailable(schedule.getIsAvailable())
+                .build();
+    }
+}

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bác Sĩ Dashboard - DatLichKhamBenh</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="logo">⚡</div>
+        <span>Bác Sĩ</span>
+      </div>
+      <div class="sidebar-section">Menu</div>
+      <a href="/doctor/dashboard.html" class="sidebar-link active"><span class="icon">📋</span> Ca Khám & Bệnh Nhân</a>
+      <a href="/doctor/schedule.html" class="sidebar-link"><span class="icon">⏰</span> Đăng Ký Ca Làm Việc</a>
+      
+      <div class="sidebar-footer">
+        <button onclick="Auth.logout()" class="btn btn-ghost btn-sm w-full">Đăng xuất</button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div class="page-header">
+        <h1 class="page-title">Danh Sách Lịch Khám Bệnh Nhân</h1>
+        <p class="page-subtitle">Xem thông tin đặt lịch, chẩn đoán và ghi kết quả khám</p>
+      </div>
+
+      <div class="card mb-3">
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Mã Lịch</th>
+                <th>Bệnh Nhân</th>
+                <th>SĐT</th>
+                <th>Ngày & Giờ</th>
+                <th>Triệu Chứng</th>
+                <th>Trạng Thái</th>
+                <th>Thao Tác</th>
+              </tr>
+            </thead>
+            <tbody id="doctor-appointments">
+              <tr><td colspan="7"><div class="spinner"></div> Đang tải...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Modal Cập nhật bệnh án -->
+      <div id="med-modal" class="modal-backdrop hidden">
+        <div class="modal">
+          <div class="modal-header">
+            <h3 class="modal-title">📝 Cập Nhật Bệnh Án & Đơn Thuốc</h3>
+            <button onclick="closeModal()" class="modal-close">✕</button>
+          </div>
+          <form id="med-record-form">
+            <input type="hidden" id="modal-appointment-id">
+            <div class="form-group">
+              <label class="form-label">Chẩn Đoán Bệnh</label>
+              <textarea id="diagnosis" class="form-control" rows="2" placeholder="Nhập kết quả chẩn đoán..." required></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Đơn Thuốc & Dặn Dò</label>
+              <textarea id="doctorNotes" class="form-control" rows="4" placeholder="Nhập tên thuốc, liều dùng và lời dặn bác sĩ..."></textarea>
+            </div>
+            <div class="modal-footer">
+              <button type="button" onclick="closeModal()" class="btn btn-ghost">Hủy</button>
+              <button type="submit" class="btn btn-success">Lưu Hồ Sơ</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/js/auth.js"></script>
+  <script>
+    Auth.checkAuth(['DOCTOR']);
+
+    async function loadAppointments() {
+      const tbody = document.getElementById('doctor-appointments');
+      try {
+        const res = await Api.doctors.myAppointments();
+        const list = res.data || [];
+
+        if (list.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" class="text-center p-3">Chưa có lịch hẹn khám nào.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = list.map(item => `
+          <tr>
+            <td><strong>#${item.bookingCode}</strong></td>
+            <td><strong>${item.patientName}</strong></td>
+            <td>${item.patientPhone || '-'}</td>
+            <td>${Utils.formatDate(item.appointmentDate)} (${Utils.formatTime(item.startTime)} - ${Utils.formatTime(item.endTime)})</td>
+            <td>${item.symptoms || '-'}</td>
+            <td>${Utils.getStatusBadge(item.status)}</td>
+            <td>
+              <button onclick="openModal(${item.id})" class="btn btn-primary btn-sm">📝 Cập nhật bệnh án</button>
+            </td>
+          </tr>
+        `).join('');
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-error p-3">${err.message}</td></tr>`;
+      }
+    }
+
+    function openModal(id) {
+      document.getElementById('modal-appointment-id').value = id;
+      document.getElementById('med-modal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('med-modal').classList.add('hidden');
+      document.getElementById('med-record-form').reset();
+    }
+
+    document.getElementById('med-record-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await Api.doctors.updateMedRecord({
+          appointmentId: parseInt(document.getElementById('modal-appointment-id').value),
+          diagnosis: document.getElementById('diagnosis').value,
+          doctorNotes: document.getElementById('doctorNotes').value
+        });
+        Utils.showToast('Lưu hồ sơ bệnh án thành công!', 'success');
+        closeModal();
+        loadAppointments();
+      } catch (err) {
+        Utils.showToast(err.message, 'error');
+      }
+    });
+
+    loadAppointments();
+  </script>
+</body>
+</html>

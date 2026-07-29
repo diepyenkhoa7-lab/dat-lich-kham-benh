@@ -28,4 +28,7 @@ public interface DoctorRepository extends JpaRepository<Doctor, Long> {
 
     // Lấy danh sách bác sĩ đã được Admin phê duyệt
     List<Doctor> findByIsApprovedTrue();
+
+    // Lấy danh sách bác sĩ theo chuyên khoa VÀ đã được duyệt
+    List<Doctor> findBySpecialtyIdAndIsApprovedTrue(Long specialtyId);
 }

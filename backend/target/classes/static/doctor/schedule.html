@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Đăng Ký Ca Làm Việc - DatLichKhamBenh</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="logo">⚡</div>
+        <span>Bác Sĩ</span>
+      </div>
+      <div class="sidebar-section">Menu</div>
+      <a href="/doctor/dashboard.html" class="sidebar-link"><span class="icon">📋</span> Ca Khám & Bệnh Nhân</a>
+      <a href="/doctor/schedule.html" class="sidebar-link active"><span class="icon">⏰</span> Đăng Ký Ca Làm Việc</a>
+      
+      <div class="sidebar-footer">
+        <button onclick="Auth.logout()" class="btn btn-ghost btn-sm w-full">Đăng xuất</button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div class="page-header">
+        <h1 class="page-title">Đăng Ký Lịch Làm Việc</h1>
+        <p class="page-subtitle">Tạo các khung giờ rảnh để bệnh nhân có thể đặt lịch</p>
+      </div>
+
+      <div class="card max-w-500" style="max-width:500px;">
+        <form id="create-slot-form">
+          <div class="form-group">
+            <label class="form-label">Chọn Ngày Khám</label>
+            <input type="date" id="workDate" class="form-control" required>
+          </div>
+
+          <div class="grid grid-2">
+            <div class="form-group">
+              <label class="form-label">Giờ Bắt Đầu</label>
+              <input type="time" id="startTime" class="form-control" value="08:00" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Giờ Kết Thúc</label>
+              <input type="time" id="endTime" class="form-control" value="08:30" required>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary w-full btn-lg">➕ Thêm Khung Giờ</button>
+        </form>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/js/auth.js"></script>
+  <script>
+    Auth.checkAuth(['DOCTOR']);
+    document.getElementById('workDate').value = new Date().toISOString().split('T')[0];
+
+    document.getElementById('create-slot-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        const startTime = document.getElementById('startTime').value;
+        const endTime = document.getElementById('endTime').value;
+
+        await Api.doctors.createSlot({
+          workDate: document.getElementById('workDate').value,
+          startTime: startTime.length === 5 ? `${startTime}:00` : startTime,
+          endTime: endTime.length === 5 ? `${endTime}:00` : endTime
+        });
+
+        Utils.showToast('Tạo ca khám rảnh thành công!', 'success');
+      } catch (err) {
+        Utils.showToast(err.message, 'error');
+      }
+    });
+  </script>
+</body>
+</html>

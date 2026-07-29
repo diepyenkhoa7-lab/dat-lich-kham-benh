@@ -7,28 +7,15 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
-/**
- * JwtTokenFilter -- Interceptor xac thuc JWT cho moi request.
- * Dat trong Security pipeline TRUOC UsernamePasswordAuthenticationFilter.
- *
- * Pipeline (theo architecture.md):
- *   Client -> JwtTokenFilter -> Role check -> Controller
- *
- * Quy trinh xu ly:
- * 1. Doc header Authorization: Bearer <token>
- * 2. Validate token qua JwtTokenProvider
- * 3. Load UserDetails tu DB hoac cache
- * 4. Set Authentication vao SecurityContext
- *
- * Logic day du se duoc bo sung o buoc tiep theo.
- */
 @Slf4j
 @Component
 public class JwtTokenFilter extends OncePerRequestFilter {
@@ -47,19 +34,41 @@ public class JwtTokenFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain
     ) throws ServletException, IOException {
-        // TODO: Extract token from Authorization header
-        // TODO: Validate token với jwtTokenProvider.validateToken()
-        // TODO: Load user từ userDetailsService.loadUserByUsername(email)
-        // TODO: Set UsernamePasswordAuthenticationToken vào SecurityContextHolder
+        try {
+            String jwt = getJwtFromRequest(request);
+
+            if (StringUtils.hasText(jwt) && jwtTokenProvider.validateToken(jwt)) {
+                String email = jwtTokenProvider.getEmailFromToken(jwt);
+                UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+
+                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                        userDetails,
+                        null,
+                        userDetails.getAuthorities()
+                );
+                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+            }
+        } catch (Exception ex) {
+            log.error("Cannot set user authentication in SecurityContext: {}", ex.getMessage());
+        }
+
         filterChain.doFilter(request, response);
     }
 
-    /**
-     * Bỏ qua filter cho các endpoint public (/api/v1/auth/**).
-     */
+    private String getJwtFromRequest(HttpServletRequest request) {
+        String bearerToken = request.getHeader("Authorization");
+        if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
+            return bearerToken.substring(7);
+        }
+        return null;
+    }
+
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getServletPath();
-        return path.startsWith("/api/v1/auth/");
+        // Chỉ chạy JwtTokenFilter đối với các REST API request /api/v1/ (ngoại trừ /api/v1/auth/)
+        return !path.startsWith("/api/v1/") || path.startsWith("/api/v1/auth/");
     }
 }

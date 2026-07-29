@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Đặt Lịch Khám Bệnh - Hệ thống Y tế Thông minh</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <a href="index.html" class="navbar-brand">
+      <div class="logo">🏥</div>
+      <span>DatLich<em>KhamBenh</em></span>
+    </a>
+    <div class="navbar-nav">
+      <a href="index.html" class="nav-link active">Trang chủ</a>
+      <a href="#features" class="nav-link">Tính năng</a>
+    </div>
+    <div class="navbar-actions" id="nav-actions">
+      <a href="login.html" class="btn btn-ghost btn-sm">Đăng nhập</a>
+      <a href="register.html" class="btn btn-primary btn-sm">Đăng ký ngay</a>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div>
+      <h1 class="hero-title">Đặt lịch khám bệnh<br><span class="highlight">Nhanh chóng & Tiện lợi</span></h1>
+      <p class="hero-subtitle">Kết nối trực tiếp với đội ngũ bác sĩ chuyên khoa hàng đầu. Đặt lịch chỉ trong vài thao tác đơn giản.</p>
+      <div class="hero-actions">
+        <a href="register.html" class="btn btn-primary btn-lg">🚀 Đăng ký đặt lịch ngay</a>
+        <a href="login.html" class="btn btn-outline btn-lg">🔑 Đăng nhập hệ thống</a>
+      </div>
+    </div>
+  </section>
+
+  <section id="features" class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">👨‍⚕️</div>
+      <h3 class="feature-title">Đội ngũ Bác sĩ Chuyên khoa</h3>
+      <p class="feature-desc">Tra cứu thông tin, bằng cấp, kinh nghiệm và học vị bác sĩ minh bạch trước khi đăng ký khám.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">⚡</div>
+      <h3 class="feature-title">Đặt slot Không trùng lặp</h3>
+      <p class="feature-desc">Hệ thống xử lý khóa thời gian thực (Pessimistic Lock) chống trùng lịch khám khi nhiều bệnh nhân cùng đặt.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📑</div>
+      <h3 class="feature-title">Hồ sơ Bệnh án Điện tử</h3>
+      <p class="feature-desc">Lưu trữ chẩn đoán, kết quả khám và đơn thuốc trực tuyến an toàn, tra cứu lịch sử khám dễ dàng.</p>
+    </div>
+  </section>
+
+  <script src="js/auth.js"></script>
+  <script>
+    const user = Auth.getUser();
+    if (user) {
+      document.getElementById('nav-actions').innerHTML = `
+        <button onclick="Auth.redirectByRole('${user.role}')" class="btn btn-primary btn-sm">Vào Trang Quản Lý (${user.role})</button>
+        <button onclick="Auth.logout()" class="btn btn-ghost btn-sm">Đăng xuất</button>
+      `;
+    }
+  </script>
+</body>
+</html>

@@ -15,7 +15,8 @@ import java.util.List;
  * CustomUserDetailsService -- Load UserDetails tu DB theo email.
  * Duoc Spring Security dung khi xac thuc.
  *
- * Email -> UserDetails (authorities = [ROLE_PATIENT / ROLE_DOCTOR / ROLE_ADMIN])
+ * Authority duoc set truc tiep theo role (ADMIN / DOCTOR / PATIENT),
+ * khong them tien to ROLE_ de khop voi hasAuthority() tren Controller.
  */
 @Service
 public class CustomUserDetailsService implements UserDetailsService {
@@ -36,10 +37,12 @@ public class CustomUserDetailsService implements UserDetailsService {
         // Boolean wrapper: Lombok @Getter tao getIsActive() (khong phai isIsActive())
         boolean isActive = Boolean.TRUE.equals(user.getIsActive());
 
+        // Dung truc tiep user.getRole() (vi du: "ADMIN") - khong them "ROLE_"
+        // de khop voi @PreAuthorize("hasAuthority('ADMIN')") tren Controller
         return org.springframework.security.core.userdetails.User.builder()
                 .username(user.getEmail())
                 .password(user.getPasswordHash())
-                .authorities(List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole())))
+                .authorities(List.of(new SimpleGrantedAuthority(user.getRole())))
                 .accountLocked(!isActive)
                 .build();
     }

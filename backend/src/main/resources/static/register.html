@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Đăng Ký Tài Khoản - DatLichKhamBenh</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="auth-container">
+    <div class="auth-card" style="max-width: 540px;">
+      <div class="auth-logo">
+        <div class="logo-icon">⚡</div>
+        <h1>Đăng Ký Tài Khoản</h1>
+        <p>Tạo tài khoản Bệnh nhân hoặc Bác sĩ</p>
+      </div>
+
+      <form id="register-form">
+        <div class="form-group">
+          <label class="form-label">Tôi là:</label>
+          <div class="grid grid-2 gap-1">
+            <button type="button" id="role-patient" class="btn btn-primary btn-sm" onclick="setRole('PATIENT')">🤒 Bệnh Nhân</button>
+            <button type="button" id="role-doctor" class="btn btn-ghost btn-sm" onclick="setRole('DOCTOR')">👨‍⚕️ Bác Sĩ</button>
+          </div>
+          <input type="hidden" id="role" value="PATIENT">
+        </div>
+
+        <div class="grid grid-2">
+          <div class="form-group">
+            <label class="form-label">Họ và Tên</label>
+            <input type="text" id="fullName" class="form-control" placeholder="Nguyễn Văn A" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Số điện thoại</label>
+            <input type="tel" id="phone" class="form-control" placeholder="0901234567" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" id="email" class="form-control" placeholder="name@example.com" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Mật khẩu</label>
+          <input type="password" id="password" class="form-control" placeholder="Tối thiểu 6 ký tự" required minlength="6">
+        </div>
+
+        <div class="grid grid-2">
+          <div class="form-group">
+            <label class="form-label">Ngày sinh</label>
+            <input type="date" id="dob" class="form-control">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Giới tính</label>
+            <select id="gender" class="form-control">
+              <option value="Nam">Nam</option>
+              <option value="Nữ">Nữ</option>
+              <option value="Khác">Khác</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Các trường dành riêng cho Bác Sĩ -->
+        <div id="doctor-fields" class="hidden">
+          <div class="form-group">
+            <label class="form-label">Chuyên khoa</label>
+            <select id="specialtyId" class="form-control">
+              <option value="1">Tim mạch</option>
+              <option value="2">Thần kinh</option>
+              <option value="3">Nhi khoa</option>
+              <option value="4">Nội tổng quát</option>
+              <option value="5">Da liễu</option>
+            </select>
+          </div>
+
+          <div class="grid grid-2">
+            <div class="form-group">
+              <label class="form-label">Số năm kinh nghiệm</label>
+              <input type="number" id="experienceYears" class="form-control" placeholder="5" value="3">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Giá khám (VNĐ)</label>
+              <input type="number" id="consultationFee" class="form-control" placeholder="300000" value="300000">
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" id="btn-submit" class="btn btn-primary w-full btn-lg mt-1">Tạo Tài Khoản</button>
+      </form>
+
+      <div class="auth-footer">
+        Đã có tài khoản? <a href="/login.html">Đăng nhập</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/js/auth.js"></script>
+  <script>
+    function setRole(role) {
+      document.getElementById('role').value = role;
+      const btnPatient = document.getElementById('role-patient');
+      const btnDoctor = document.getElementById('role-doctor');
+      const doctorFields = document.getElementById('doctor-fields');
+
+      if (role === 'PATIENT') {
+        btnPatient.className = 'btn btn-primary btn-sm';
+        btnDoctor.className = 'btn btn-ghost btn-sm';
+        doctorFields.classList.add('hidden');
+      } else {
+        btnDoctor.className = 'btn btn-primary btn-sm';
+        btnPatient.className = 'btn btn-ghost btn-sm';
+        doctorFields.classList.remove('hidden');
+      }
+    }
+
+    document.getElementById('register-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('btn-submit');
+      btn.disabled = true;
+      btn.innerHTML = '<div class="spinner"></div> Đang đăng ký...';
+
+      const role = document.getElementById('role').value;
+      const body = {
+        email: document.getElementById('email').value,
+        password: document.getElementById('password').value,
+        role: role,
+        fullName: document.getElementById('fullName').value,
+        phone: document.getElementById('phone').value,
+        dob: document.getElementById('dob').value,
+        gender: document.getElementById('gender').value
+      };
+
+      if (role === 'DOCTOR') {
+        body.specialtyId = parseInt(document.getElementById('specialtyId').value);
+        body.experienceYears = parseInt(document.getElementById('experienceYears').value);
+        body.consultationFee = parseFloat(document.getElementById('consultationFee').value);
+      }
+
+      try {
+        await Api.auth.register(body);
+        Utils.showToast('Đăng ký thành công! Đang chuyển hướng...', 'success');
+        setTimeout(() => window.location.href = '/login.html', 1000);
+      } catch (err) {
+        Utils.showToast(err.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = 'Tạo Tài Khoản';
+      }
+    });
+  </script>
+</body>
+</html>

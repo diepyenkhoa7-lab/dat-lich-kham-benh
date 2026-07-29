@@ -12,16 +12,6 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
-/**
- * JwtTokenProvider — Sinh và xác thực JWT token.
- *
- * Cấu trúc token: Header.Payload.Signature
- * - Payload chứa: subject (email), role, expiration
- * - Signature = HMAC-SHA256(Header + Payload, SECRET_KEY)
- *
- * Logic nghiệp vụ đầy đủ sẽ được bổ sung ở bước tiếp theo.
- * Hiện tại chỉ định nghĩa cấu trúc và inject config.
- */
 @Slf4j
 @Component
 public class JwtTokenProvider {
@@ -32,13 +22,64 @@ public class JwtTokenProvider {
     @Value("${app.jwt.expiration-ms}")
     private long jwtExpirationMs;
 
-    // TODO: generateToken(String email, String role) → String
-    // TODO: getEmailFromToken(String token)          → String
-    // TODO: getRoleFromToken(String token)           → String
-    // TODO: validateToken(String token)              → boolean
-    // TODO: extractClaims(String token)              → Claims
+    @Value("${app.jwt.refresh-expiration-ms:604800000}")
+    private long refreshExpirationMs;
 
     private SecretKey getSigningKey() {
         return Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+    }
+
+    public String generateToken(String email, String role) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + jwtExpirationMs);
+
+        return Jwts.builder()
+                .subject(email)
+                .claim("role", role)
+                .issuedAt(now)
+                .expiration(expiryDate)
+                .signWith(getSigningKey())
+                .compact();
+    }
+
+    public String generateRefreshToken(String email) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + refreshExpirationMs);
+
+        return Jwts.builder()
+                .subject(email)
+                .claim("type", "refresh")
+                .issuedAt(now)
+                .expiration(expiryDate)
+                .signWith(getSigningKey())
+                .compact();
+    }
+
+    public String getEmailFromToken(String token) {
+        Claims claims = extractClaims(token);
+        return claims.getSubject();
+    }
+
+    public String getRoleFromToken(String token) {
+        Claims claims = extractClaims(token);
+        return claims.get("role", String.class);
+    }
+
+    public boolean validateToken(String token) {
+        try {
+            extractClaims(token);
+            return true;
+        } catch (JwtException | IllegalArgumentException e) {
+            log.error("Invalid JWT token: {}", e.getMessage());
+        }
+        return false;
+    }
+
+    public Claims extractClaims(String token) {
+        return Jwts.parser()
+                .verifyWith(getSigningKey())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
     }
 }

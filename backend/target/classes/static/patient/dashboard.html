@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bệnh Nhân Dashboard - DatLichKhamBenh</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="logo">⚡</div>
+        <span>Bệnh Nhân</span>
+      </div>
+      <div class="sidebar-section">Menu</div>
+      <a href="/patient/dashboard.html" class="sidebar-link active"><span class="icon">🏠</span> Đặt Lịch Khám</a>
+      <a href="/patient/appointments.html" class="sidebar-link"><span class="icon">📅</span> Lịch Hẹn Của Tôi</a>
+      <a href="/patient/doctors.html" class="sidebar-link"><span class="icon">👨‍⚕️</span> Danh Sách Bác Sĩ</a>
+      
+      <div class="sidebar-footer">
+        <button onclick="Auth.logout()" class="btn btn-ghost btn-sm w-full">Đăng xuất</button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div class="page-header">
+        <h1 class="page-title">Chào mừng trở lại! 👋</h1>
+        <p class="page-subtitle">Chọn Bác sĩ và khung giờ để đặt lịch khám bệnh trực tuyến</p>
+      </div>
+
+      <div class="grid grid-3 mb-3">
+        <div class="card">
+          <div class="form-group mb-0">
+            <label class="form-label">1. Lọc theo chuyên khoa</label>
+            <select id="specialty-select" class="form-control" onchange="loadDoctors()">
+              <option value="">Tất cả chuyên khoa</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="form-group mb-0">
+            <label class="form-label">2. Chọn ngày khám</label>
+            <input type="date" id="date-select" class="form-control" onchange="onDateChange()">
+          </div>
+        </div>
+
+        <div class="card stat-card" style="text-align:left;">
+          <div class="card-subtitle">Bác sĩ đang chọn</div>
+          <div id="selected-doctor-name" class="fw-700 text-accent mt-1">Chưa chọn bác sĩ</div>
+        </div>
+      </div>
+
+      <div class="grid grid-2">
+        <div class="card">
+          <h3 class="card-title mb-2">👨‍⚕️ Danh Sách Bác Sĩ</h3>
+          <div id="doctors-list" class="grid grid-1 gap-1">
+            <div class="spinner"></div> Đang tải danh sách bác sĩ...
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 class="card-title mb-2">⏱️ Chọn Khung Giờ Rảnh</h3>
+          <div id="slots-container" class="mb-3">
+            <p class="text-secondary text-sm">Vui lòng chọn 1 bác sĩ ở bên trái để xem khung giờ.</p>
+          </div>
+
+          <form id="booking-form" class="hidden">
+            <div class="form-group">
+              <label class="form-label">Mô tả triệu chứng bệnh</label>
+              <textarea id="symptoms" class="form-control" rows="3" placeholder="Nhập triệu chứng cụ thể (vd: Đau đầu, sốt nhẹ 2 ngày...)" required></textarea>
+            </div>
+
+            <button type="submit" id="btn-book" class="btn btn-success w-full btn-lg">⚡ Xác Nhận Đặt Lịch</button>
+          </form>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/js/auth.js"></script>
+  <script>
+    Auth.checkAuth(['PATIENT']);
+
+    let selectedDoctorId = null;
+    let selectedScheduleId = null;
+
+    document.getElementById('date-select').value = new Date().toISOString().split('T')[0];
+
+    async function init() {
+      try {
+        const specRes = await Api.admin.specialties();
+        const select = document.getElementById('specialty-select');
+        (specRes.data || []).forEach(s => {
+          select.innerHTML += `<option value="${s.id}">${s.name}</option>`;
+        });
+        loadDoctors();
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function loadDoctors() {
+      const specId = document.getElementById('specialty-select').value;
+      const listEl = document.getElementById('doctors-list');
+      try {
+        const res = await Api.doctors.list(specId);
+        const doctors = res.data || [];
+
+        if (doctors.length === 0) {
+          listEl.innerHTML = '<div class="empty-state">Không tìm thấy bác sĩ nào.</div>';
+          return;
+        }
+
+        listEl.innerHTML = doctors.map(doc => `
+          <div class="card doctor-card ${selectedDoctorId === doc.id ? 'active' : ''}" onclick="selectDoctor(${doc.id}, '${doc.fullName}')">
+            <div class="d-flex align-center gap-2">
+              <div class="avatar">👨‍⚕️</div>
+              <div>
+                <div class="name">${doc.fullName}</div>
+                <div class="specialty">${doc.specialtyName || 'Chuyên khoa'}</div>
+                <div class="meta-row">⭐ Kinh nghiệm: ${doc.experienceYears} năm</div>
+                <div class="fee">${Utils.formatCurrency(doc.consultationFee)}</div>
+              </div>
+            </div>
+          </div>
+        `).join('');
+      } catch (err) {
+        listEl.innerHTML = `<div class="alert alert-error">${err.message}</div>`;
+      }
+    }
+
+    function selectDoctor(id, name) {
+      selectedDoctorId = id;
+      document.getElementById('selected-doctor-name').innerText = name;
+      loadDoctors();
+      loadSlots();
+    }
+
+    function onDateChange() {
+      if (selectedDoctorId) loadSlots();
+    }
+
+    async function loadSlots() {
+      if (!selectedDoctorId) return;
+      const date = document.getElementById('date-select').value;
+      const container = document.getElementById('slots-container');
+      container.innerHTML = '<div class="spinner"></div> Đang kiểm tra lịch rảnh...';
+
+      try {
+        const res = await Api.doctors.slots(selectedDoctorId, date);
+        const slots = res.data || [];
+
+        if (slots.length === 0) {
+          container.innerHTML = '<p class="text-secondary text-sm">Không có khung giờ rảnh nào trong ngày này.</p>';
+          document.getElementById('booking-form').classList.add('hidden');
+          return;
+        }
+
+        container.innerHTML = `
+          <div class="slots-grid">
+            ${slots.map(s => `
+              <button type="button" 
+                      class="slot-btn ${!s.available ? 'unavailable' : ''} ${selectedScheduleId === s.id ? 'selected' : ''}"
+                      ${!s.available ? 'disabled' : ''}
+                      onclick="selectSchedule(${s.id})">
+                ${Utils.formatTime(s.startTime)} - ${Utils.formatTime(s.endTime)}
+              </button>
+            `).join('')}
+          </div>
+        `;
+      } catch (err) {
+        container.innerHTML = `<p class="text-error text-sm">${err.message}</p>`;
+      }
+    }
+
+    function selectSchedule(id) {
+      selectedScheduleId = id;
+      loadSlots();
+      document.getElementById('booking-form').classList.remove('hidden');
+    }
+
+    document.getElementById('booking-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!selectedScheduleId) {
+        Utils.showToast('Vui lòng chọn khung giờ trước!', 'error');
+        return;
+      }
+
+      const btn = document.getElementById('btn-book');
+      btn.disabled = true;
+      btn.innerHTML = '<div class="spinner"></div> Đang khóa giữ slot...';
+
+      try {
+        const symptoms = document.getElementById('symptoms').value;
+        const res = await Api.appointments.create({
+          scheduleId: selectedScheduleId,
+          symptoms: symptoms
+        });
+
+        Utils.showToast(`Đặt lịch thành công! Mã booking: ${res.data.bookingCode}`, 'success');
+        document.getElementById('booking-form').reset();
+        document.getElementById('booking-form').classList.add('hidden');
+        selectedScheduleId = null;
+        loadSlots();
+      } catch (err) {
+        Utils.showToast(err.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '⚡ Xác Nhận Đặt Lịch';
+      }
+    });
+
+    init();
+  </script>
+</body>
+</html>

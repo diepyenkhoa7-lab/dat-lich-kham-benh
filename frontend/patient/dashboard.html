@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bệnh Nhân - DatLichKhamBenh</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="logo">🏥</div>
+        <span>Bệnh Nhân</span>
+      </div>
+      <div class="sidebar-section">Menu</div>
+      <a href="dashboard.html" class="sidebar-link active"><span class="icon">👨‍⚕️</span> Tìm & Đặt Bác Sĩ</a>
+      <a href="appointments.html" class="sidebar-link"><span class="icon">📅</span> Lịch Hẹn Của Tôi</a>
+      
+      <div class="sidebar-footer">
+        <div class="user-chip mb-2">
+          <div class="avatar" id="user-avatar">P</div>
+          <div class="name" id="user-name">Bệnh nhân</div>
+        </div>
+        <button onclick="Auth.logout()" class="btn btn-ghost btn-sm w-full">Đăng xuất</button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div class="page-header">
+        <div class="page-header-row">
+          <div>
+            <h1 class="page-title">Tìm & Đặt Lịch Khám Bác Sĩ</h1>
+            <p class="page-subtitle">Lọc theo chuyên khoa và chọn khung giờ khám phù hợp</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="card mb-3">
+        <div class="form-group mb-0">
+          <label class="form-label">Chọn Chuyên Khoa</label>
+          <select id="specialty-select" class="form-control" onchange="loadDoctors(this.value)">
+            <option value="">-- Tất cả chuyên khoa --</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Doctor Grid -->
+      <div class="grid grid-3" id="doctor-grid">
+        <div class="card empty-state" style="grid-column:1/-1;">
+          <div class="spinner"></div>
+          <p class="mt-1">Đang tải danh sách bác sĩ...</p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Booking Modal -->
+  <div class="modal-backdrop hidden" id="booking-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modal-doc-name">Đặt lịch với Bác sĩ</h3>
+        <button class="modal-close" onclick="closeModal()">×</button>
+      </div>
+
+      <form id="booking-form">
+        <input type="hidden" id="selected-doctor-id">
+        <input type="hidden" id="selected-schedule-id">
+
+        <div class="form-group">
+          <label class="form-label">Chọn Ngày Khám</label>
+          <input type="date" id="booking-date" class="form-control" onchange="loadSlots()">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Chọn Khung Giờ (Slot)</label>
+          <div id="slots-container" class="slots-grid">
+            <p class="text-muted text-sm">Vui lòng chọn ngày khám trước</p>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Mô tả triệu chứng bệnh</label>
+          <textarea id="symptoms" class="form-control" rows="3" placeholder="VD: Đau ngực nhẹ, sốt từ tối qua..."></textarea>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" onclick="closeModal()">Hủy</button>
+          <button type="submit" class="btn btn-primary" id="btn-confirm-booking" disabled>Xác Nhận Đặt Lịch</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="../js/api.js"></script>
+  <script src="../js/utils.js"></script>
+  <script src="../js/auth.js"></script>
+  <script>
+    const user = Auth.checkAuth(['PATIENT']);
+    if (user) {
+      document.getElementById('user-name').innerText = user.email.split('@')[0];
+    }
+
+    // Default date to tomorrow
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    document.getElementById('booking-date').valueStr = tomorrow.toISOString().split('T')[0];
+    document.getElementById('booking-date').value = tomorrow.toISOString().split('T')[0];
+
+    async function init() {
+      try {
+        const specRes = await Api.admin.specialties();
+        const specSelect = document.getElementById('specialty-select');
+        (specRes.data || []).forEach(s => {
+          specSelect.innerHTML += `<option value="${s.id}">${s.name}</option>`;
+        });
+      } catch (e) {}
+
+      loadDoctors('');
+    }
+
+    async function loadDoctors(specialtyId) {
+      const grid = document.getElementById('doctor-grid');
+      grid.innerHTML = '<div class="card empty-state" style="grid-column:1/-1;"><div class="spinner"></div><p class="mt-1">Đang tải...</p></div>';
+
+      try {
+        const res = await Api.doctors.list(specialtyId || null);
+        const doctors = res.data || [];
+
+        if (doctors.length === 0) {
+          grid.innerHTML = '<div class="card empty-state" style="grid-column:1/-1;"><div class="icon">👨‍⚕️</div><h3>Không tìm thấy bác sĩ nào</h3></div>';
+          return;
+        }
+
+        grid.innerHTML = doctors.map(d => `
+          <div class="card doctor-card" onclick="openBookingModal(${d.userId}, '${d.fullName}')">
+            <div class="avatar">👨‍⚕️</div>
+            <div class="name">${d.fullName}</div>
+            <div class="specialty">${d.specialtyName || 'Chưa xếp chuyên khoa'}</div>
+            <div class="meta">
+              <div class="meta-row">🎓 ${d.degree || 'Bác sĩ'}</div>
+              <div class="meta-row">⭐ ${d.experienceYears} năm kinh nghiệm</div>
+            </div>
+            <div class="fee">${Utils.formatCurrency(d.consultationFee)}</div>
+            <button class="btn btn-primary btn-sm w-full mt-2">Đặt Lịch Khám</button>
+          </div>
+        `).join('');
+      } catch (err) {
+        grid.innerHTML = `<div class="alert alert-error" style="grid-column:1/-1;">${err.message}</div>`;
+      }
+    }
+
+    function openBookingModal(docId, docName) {
+      document.getElementById('selected-doctor-id').value = docId;
+      document.getElementById('modal-doc-name').innerText = `Đặt lịch với ${docName}`;
+      document.getElementById('booking-modal').classList.remove('hidden');
+      loadSlots();
+    }
+
+    function closeModal() {
+      document.getElementById('booking-modal').classList.add('hidden');
+      document.getElementById('selected-schedule-id').value = '';
+      document.getElementById('btn-confirm-booking').disabled = true;
+    }
+
+    async function loadSlots() {
+      const docId = document.getElementById('selected-doctor-id').value;
+      const date = document.getElementById('booking-date').value;
+      const container = document.getElementById('slots-container');
+      if (!date || !docId) return;
+
+      container.innerHTML = '<div class="spinner"></div> Tải khung giờ...';
+
+      try {
+        const res = await Api.doctors.slots(docId, date);
+        const slots = res.data || [];
+
+        if (slots.length === 0) {
+          container.innerHTML = '<p class="text-muted text-sm" style="grid-column:1/-1;">Bác sĩ chưa có lịch rảnh vào ngày này.</p>';
+          return;
+        }
+
+        container.innerHTML = slots.map(s => `
+          <button type="button" class="slot-btn ${!s.available ? 'unavailable' : ''}" 
+            ${!s.available ? 'disabled' : ''} 
+            onclick="selectSlot(this, ${s.id})">
+            ${Utils.formatTime(s.startTime)} - ${Utils.formatTime(s.endTime)}
+          </button>
+        `).join('');
+      } catch (err) {
+        container.innerHTML = `<p class="text-muted text-sm">${err.message}</p>`;
+      }
+    }
+
+    function selectSlot(btn, scheduleId) {
+      document.querySelectorAll('.slot-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      document.getElementById('selected-schedule-id').value = scheduleId;
+      document.getElementById('btn-confirm-booking').disabled = false;
+    }
+
+    document.getElementById('booking-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const scheduleId = document.getElementById('selected-schedule-id').value;
+      const symptoms = document.getElementById('symptoms').value;
+      const btn = document.getElementById('btn-confirm-booking');
+
+      if (!scheduleId) return;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Đang xử lý...';
+
+      try {
+        await Api.appointments.create({
+          scheduleId: parseInt(scheduleId),
+          symptoms: symptoms
+        });
+        Utils.showToast('Đặt lịch khám thành công!', 'success');
+        closeModal();
+        setTimeout(() => window.location.href = 'appointments.html', 1000);
+      } catch (err) {
+        Utils.showToast(err.message, 'error');
+        btn.disabled = false;
+        btn.innerText = 'Xác Nhận Đặt Lịch';
+      }
+    });
+
+    init();
+  </script>
+</body>
+</html>

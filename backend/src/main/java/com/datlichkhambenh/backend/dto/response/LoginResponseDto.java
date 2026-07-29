@@ -1,25 +1,18 @@
 package com.datlichkhambenh.backend.dto.response;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
-/**
- * DTO trả về sau khi đăng nhập thành công.
- * Chứa JWT access token và thông tin cơ bản.
- * Logic nghiệp vụ sẽ được bổ sung ở bước tiếp theo.
- */
-@Data
-@Builder
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class LoginResponseDto {
 
     private String accessToken;
-    private String tokenType = "Bearer";
-    private long expiresIn;  // seconds
-    private String role;
+    private String refreshToken;
+    private String tokenType;
     private Long userId;
     private String email;
+    private String role;
 }
