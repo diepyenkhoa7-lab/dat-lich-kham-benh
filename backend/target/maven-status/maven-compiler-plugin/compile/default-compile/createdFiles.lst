@@ -66,6 +66,7 @@ com\datlichkhambenh\backend\controller\DoctorController.class
 com\datlichkhambenh\backend\dto\response\SpecialtyDto.class
 com\datlichkhambenh\backend\service\impl\RedisCacheServiceImpl.class
 com\datlichkhambenh\backend\exception\AppException.class
+com\datlichkhambenh\backend\dto\request\ChangePasswordDto.class
 com\datlichkhambenh\backend\dto\response\MedicalRecordDto$MedicalRecordDtoBuilder.class
 com\datlichkhambenh\backend\security\JwtTokenProvider.class
 com\datlichkhambenh\backend\service\RedisCacheService.class

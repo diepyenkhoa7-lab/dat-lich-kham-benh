@@ -204,9 +204,9 @@ public class AdminManagementServiceImpl implements AdminManagementService {
                     .map(com.datlichkhambenh.backend.entity.Appointment::getPrice)
                     .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
 
-            // Mỗi tháng có khoảng 180-220 lượt khám thanh toán (tổng 12 tháng ~ 2,450 lượt khám)
-            int monthTxCount = 180 + ((m * 19) % 45);
-            long totalMonthApps = entries.size() + monthTxCount;
+            // Mỗi tháng chỉ sinh 5 giao dịch mẫu (đủ demo, không nặng)
+            int monthTxCount = 5;
+            long totalMonthApps = entries.size() + 180 + ((m * 19) % 45);
             java.math.BigDecimal monthMockRevenue = new java.math.BigDecimal(45000000L + (m * 8200000L) + ((m * m * 3500000L) % 28000000L));
             java.math.BigDecimal monthTotalRevenue = realRevenue.add(monthMockRevenue);
 
@@ -249,9 +249,9 @@ public class AdminManagementServiceImpl implements AdminManagementService {
             months.add(Map.of(
                 "month", month,
                 "appointments", totalMonthApps,
-                "completed", completed + baseMockCount - 2,
+                "completed", completed + monthTxCount - 2,
                 "cancelled", cancelled + 2,
-                "revenue", monthTotalRevenue,
+                "revenue", monthTotalRevenue.doubleValue(),
                 "growthPercent", Math.round(growthPercent * 10.0) / 10.0
             ));
         }
@@ -272,9 +272,9 @@ public class AdminManagementServiceImpl implements AdminManagementService {
                     "confirmed", list.stream().filter(a -> "CONFIRMED".equals(a.getStatus())).count() + 5,
                     "completed", list.stream().filter(a -> "COMPLETED".equals(a.getStatus())).count() + 38,
                     "cancelled", list.stream().filter(a -> "CANCELLED".equals(a.getStatus())).count() + 2,
-                    "revenue", revenue
+                    "revenue", revenue.doubleValue()
             );
-        }).sorted((a,b) -> ((java.math.BigDecimal)b.get("revenue")).compareTo((java.math.BigDecimal)a.get("revenue"))).toList();
+        }).sorted((a,b) -> Double.compare((Double)b.get("revenue"), (Double)a.get("revenue"))).toList();
 
         Map<String, Long> statusCounts = Map.of(
                 "CONFIRMED", yearly.stream().filter(a -> "CONFIRMED".equals(a.getStatus())).count() + 85,
@@ -295,10 +295,14 @@ public class AdminManagementServiceImpl implements AdminManagementService {
         result.put("doctorRankings", rankings);
         result.put("statusCounts", statusCounts);
         result.put("dailyRevenue", dailyRevenue);
+        // Trả về toàn bộ giao dịch (hiện chỉ 60 bản/năm — 5 tx × 12 tháng)
         result.put("transactions", allTransactions);
+        result.put("totalTransactions", allTransactions.size());
         result.put("yearAppointments", totalYearApps);
-        result.put("yearRevenue", totalYearRevenue);
-        result.put("avgPerAppointment", totalYearApps > 0 ? totalYearRevenue.divide(new java.math.BigDecimal(totalYearApps), 0, java.math.RoundingMode.HALF_UP) : java.math.BigDecimal.ZERO);
+        result.put("yearRevenue", totalYearRevenue.doubleValue());
+        result.put("avgPerAppointment", totalYearApps > 0
+                ? totalYearRevenue.divide(new java.math.BigDecimal(totalYearApps), 0, java.math.RoundingMode.HALF_UP).doubleValue()
+                : 0.0);
 
         return result;
     }
