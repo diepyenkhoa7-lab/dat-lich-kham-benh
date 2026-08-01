@@ -12,8 +12,9 @@ const Utils = {
     }
 
     const toastId = 'toast-' + Date.now();
-    const bgClass = type === 'success' ? 'bg-success text-white' : (type === 'error' ? 'bg-danger text-white' : 'bg-info text-white');
-    const icon = type === 'success' ? '<i class="bi bi-check-circle-fill me-2 fs-5"></i>' : (type === 'error' ? '<i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>' : '<i class="bi bi-info-circle-fill me-2 fs-5"></i>');
+    const isError = type === 'error' || type === 'danger';
+    const bgClass = type === 'success' ? 'bg-success text-white' : (isError ? 'bg-danger text-white' : 'bg-info text-white');
+    const icon = type === 'success' ? '<i class="bi bi-check-circle-fill me-2 fs-5"></i>' : (isError ? '<i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>' : '<i class="bi bi-info-circle-fill me-2 fs-5"></i>');
 
     const toastEl = document.createElement('div');
     toastEl.className = `toast align-items-center ${bgClass} border-0 shadow-lg mb-2 show`;

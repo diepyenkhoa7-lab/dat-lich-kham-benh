@@ -40,6 +40,16 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Long> {
     boolean existsByDoctorUserIdAndWorkDateAndStartTimeLessThanAndEndTimeGreaterThan(
             Long doctorId, LocalDate workDate, java.time.LocalTime endTime, java.time.LocalTime startTime);
 
+    @Query("SELECT COUNT(s) > 0 FROM Schedule s WHERE s.doctor.userId = :doctorId " +
+           "AND s.workDate = :workDate " +
+           "AND s.startTime < :endTime AND s.endTime > :startTime " +
+           "AND s.id != :excludeId")
+    boolean existsDuplicateSlot(@Param("doctorId") Long doctorId, 
+                                 @Param("workDate") LocalDate workDate, 
+                                 @Param("startTime") java.time.LocalTime startTime, 
+                                 @Param("endTime") java.time.LocalTime endTime, 
+                                 @Param("excludeId") Long excludeId);
+
     boolean existsByDoctorUserId(Long doctorId);
 
     List<Schedule> findByDoctorUserIdAndWorkDateGreaterThanEqualOrderByWorkDateAscStartTimeAsc(

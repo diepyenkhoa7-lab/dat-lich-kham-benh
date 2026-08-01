@@ -120,6 +120,60 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
         redisCacheService.evictSlotCache(schedule.getDoctor().getUserId(), schedule.getWorkDate());
     }
 
+    @Override
+    @Transactional
+    public ScheduleDto updateSlot(Long doctorUserId, Long scheduleId, CreateScheduleDto request) {
+        Schedule schedule = scheduleRepository.findByIdForUpdate(scheduleId)
+                .orElseThrow(() -> new ResourceNotFoundException("Ca khám không tồn tại"));
+
+        if (!schedule.getDoctor().getUserId().equals(doctorUserId)) {
+            throw new AppException("Bạn không quản lý ca khám này");
+        }
+        if (appointmentRepository.existsByScheduleId(scheduleId)) {
+            throw new AppException("Không thể chỉnh sửa ca khám đã có lịch hẹn");
+        }
+        if (!request.getWorkDate().isAfter(LocalDate.now())) {
+            throw new AppException("Ngày làm việc phải sau ngày hiện tại");
+        }
+        if (!request.getEndTime().isAfter(request.getStartTime())) {
+            throw new AppException("Giờ kết thúc phải sau giờ bắt đầu");
+        }
+        if (scheduleRepository.existsDuplicateSlot(
+                doctorUserId, request.getWorkDate(), request.getStartTime(), request.getEndTime(), scheduleId)) {
+            throw new AppException("Khung giờ bị trùng với ca làm việc đã đăng ký khác");
+        }
+
+        LocalDate oldDate = schedule.getWorkDate();
+        schedule.setWorkDate(request.getWorkDate());
+        schedule.setStartTime(request.getStartTime());
+        schedule.setEndTime(request.getEndTime());
+        Schedule saved = scheduleRepository.save(schedule);
+
+        redisCacheService.evictSlotCache(doctorUserId, oldDate);
+        if (!oldDate.equals(request.getWorkDate())) {
+            redisCacheService.evictSlotCache(doctorUserId, request.getWorkDate());
+        }
+
+        return mapToDto(saved);
+    }
+
+    @Override
+    @Transactional
+    public void deleteSlot(Long doctorUserId, Long scheduleId) {
+        Schedule schedule = scheduleRepository.findByIdForUpdate(scheduleId)
+                .orElseThrow(() -> new ResourceNotFoundException("Ca khám không tồn tại"));
+
+        if (!schedule.getDoctor().getUserId().equals(doctorUserId)) {
+            throw new AppException("Bạn không quản lý ca khám này");
+        }
+        if (appointmentRepository.existsByScheduleId(scheduleId)) {
+            throw new AppException("Không thể xóa ca khám đã có lịch hẹn");
+        }
+
+        scheduleRepository.delete(schedule);
+        redisCacheService.evictSlotCache(doctorUserId, schedule.getWorkDate());
+    }
+
     private ScheduleDto mapToDto(Schedule schedule) {
         return ScheduleDto.builder()
                 .id(schedule.getId())

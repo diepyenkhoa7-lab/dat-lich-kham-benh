@@ -1,5 +1,6 @@
 package com.datlichkhambenh.backend.controller;
 
+import com.datlichkhambenh.backend.dto.request.ChangePasswordDto;
 import com.datlichkhambenh.backend.dto.request.LoginRequestDto;
 import com.datlichkhambenh.backend.dto.request.RefreshTokenRequestDto;
 import com.datlichkhambenh.backend.dto.request.RegisterRequestDto;
@@ -11,6 +12,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -40,5 +43,13 @@ public class AuthController {
     public ResponseEntity<ApiResponseDto<LoginResponseDto>> refreshToken(@Valid @RequestBody RefreshTokenRequestDto request) {
         LoginResponseDto response = authService.refreshToken(request);
         return ResponseEntity.ok(ApiResponseDto.success(response, "Làm mới token thành công"));
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<ApiResponseDto<Void>> changePassword(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @Valid @RequestBody ChangePasswordDto request) {
+        authService.changePassword(userDetails.getUsername(), request);
+        return ResponseEntity.ok(ApiResponseDto.success(null, "Đổi mật khẩu thành công"));
     }
 }

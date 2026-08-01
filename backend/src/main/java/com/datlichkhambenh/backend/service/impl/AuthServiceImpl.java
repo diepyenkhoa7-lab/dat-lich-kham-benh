@@ -179,4 +179,17 @@ public class AuthServiceImpl implements AuthService {
     private String normalizeEmail(String email) {
         return email.trim().toLowerCase(Locale.ROOT);
     }
+
+    @Override
+    @Transactional
+    public void changePassword(String email, com.datlichkhambenh.backend.dto.request.ChangePasswordDto request) {
+        User user = userRepository.findByEmailIgnoreCase(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tài khoản"));
+
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
+            throw new AppException("Mật khẩu hiện tại không đúng");
+        }
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+    }
 }

@@ -96,6 +96,29 @@ public class DoctorController {
         return ResponseEntity.ok(ApiResponseDto.success(null, "Cập nhật trạng thái ca khám thành công"));
     }
 
+    @PutMapping("/slots/{id}")
+    @PreAuthorize("hasAuthority('DOCTOR')")
+    public ResponseEntity<ApiResponseDto<ScheduleDto>> updateSlot(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable("id") Long scheduleId,
+            @Valid @RequestBody CreateScheduleDto request
+    ) {
+        Long doctorUserId = currentUserService.getUserId(userDetails);
+        ScheduleDto slot = doctorScheduleService.updateSlot(doctorUserId, scheduleId, request);
+        return ResponseEntity.ok(ApiResponseDto.success(slot, "Cập nhật ca khám thành công"));
+    }
+
+    @DeleteMapping("/slots/{id}")
+    @PreAuthorize("hasAuthority('DOCTOR')")
+    public ResponseEntity<ApiResponseDto<Void>> deleteSlot(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable("id") Long scheduleId
+    ) {
+        Long doctorUserId = currentUserService.getUserId(userDetails);
+        doctorScheduleService.deleteSlot(doctorUserId, scheduleId);
+        return ResponseEntity.ok(ApiResponseDto.success(null, "Xóa ca khám thành công"));
+    }
+
     @GetMapping("/my-appointments")
     @PreAuthorize("hasAuthority('DOCTOR')")
     public ResponseEntity<ApiResponseDto<List<AppointmentDto>>> getMyDoctorAppointments(@AuthenticationPrincipal UserDetails userDetails) {

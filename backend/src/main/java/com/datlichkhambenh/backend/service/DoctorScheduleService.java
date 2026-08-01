@@ -11,4 +11,6 @@ public interface DoctorScheduleService {
     List<ScheduleDto> getAvailableSlots(Long doctorUserId, LocalDate date);
     List<ScheduleDto> getDoctorSlots(Long doctorUserId);
     void toggleSlotAvailability(Long doctorUserId, Long scheduleId, boolean available);
+    ScheduleDto updateSlot(Long doctorUserId, Long scheduleId, CreateScheduleDto request);
+    void deleteSlot(Long doctorUserId, Long scheduleId);
 }

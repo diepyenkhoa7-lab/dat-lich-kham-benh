@@ -135,6 +135,7 @@
       const btn = document.getElementById('btn-submit');
       errBox.classList.add('hidden');
       btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Đang tạo tài khoản...';
 
       const body = {
         email: document.getElementById('email').value,
@@ -157,13 +158,14 @@
 
       try {
         await Api.auth.register(body);
-        alert('Đăng ký thành công! Hãy đăng nhập để tiếp tục.');
-        window.location.href = 'login.html';
+        Utils.showToast('Đăng ký thành công! Đang chuyển đến trang đăng nhập...', 'success');
+        setTimeout(() => { window.location.href = 'login.html'; }, 1500);
       } catch (err) {
         errBox.innerText = err.message;
         errBox.classList.remove('hidden');
       } finally {
         btn.disabled = false;
+        btn.innerHTML = 'Tạo Tài Khoản';
       }
     });
     loadSpecialties();

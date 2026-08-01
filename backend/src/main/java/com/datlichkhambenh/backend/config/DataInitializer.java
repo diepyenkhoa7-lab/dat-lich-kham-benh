@@ -57,7 +57,7 @@ public class DataInitializer implements ApplicationRunner {
         createAdminUser("admin@clinic.vn", "Admin@123");
         createAdminUser("admin@clinic", "admin@2026");
 
-        // 3. Doctor Users & Profiles (8 Bác sĩ)
+        // 3. Doctor Users & Profiles (8 Bác sĩ mặc định)
         Doctor doc1 = createDoctorUser("bs.nguyenvana@clinic.vn", "Doctor@123", "BS. Nguyễn Văn An", "0901234567", s1, "Tiến sĩ Y khoa - CKI Tim mạch", 15, BigDecimal.valueOf(350000), true);
         Doctor doc2 = createDoctorUser("bs.tranthib@clinic.vn", "Doctor@123", "BS. Trần Thị Bích", "0912345678", s3, "Thạc sĩ Y khoa - Nhi khoa", 10, BigDecimal.valueOf(250000), true);
         Doctor doc3 = createDoctorUser("bs.lephuongc@clinic.vn", "Doctor@123", "BS. Lê Phương Chi", "0923456789", s5, "Bác sĩ CKI Da liễu", 7, BigDecimal.valueOf(200000), true);
@@ -67,12 +67,49 @@ public class DataInitializer implements ApplicationRunner {
         Doctor doc7 = createDoctorUser("bs.dangquoch@clinic.vn", "Doctor@123", "BS. Đặng Quốc Hùng", "0955667788", s7, "Bác sĩ CKII Tai Mũi Họng", 14, BigDecimal.valueOf(300000), true);
         Doctor doc8 = createDoctorUser("bs.ngobichn@clinic.vn", "Doctor@123", "BS. Ngô Bích Ngọc", "0966778899", s8, "Bác sĩ Chuyên khoa Xương Khớp", 5, BigDecimal.valueOf(200000), false); // Chưa duyệt
 
-        // 4. Patient Users & Profiles (5 Bệnh nhân)
+        // Sinh tự động thêm 50 bác sĩ nữa
+        Specialty[] specialties = {s1, s2, s3, s4, s5, s6, s7, s8};
+        String[] ho = {"Nguyễn", "Trần", "Lê", "Phạm", "Hoàng", "Huỳnh", "Phan", "Vũ", "Võ", "Đặng", "Bùi", "Đỗ", "Hồ", "Ngô"};
+        String[] tenDem = {"Văn", "Thị", "Minh", "Hồng", "Anh", "Đức", "Thành", "Ngọc", "Xuân", "Quốc", "Gia", "Khánh", "Nhật", "Hải"};
+        String[] ten = {"An", "Bình", "Chương", "Dương", "Đạt", "Hùng", "Hải", "Khánh", "Linh", "Minh", "Nam", "Phong", "Sơn", "Trang", "Tùng", "Vinh", "Vy", "Yến"};
+
+        for (int i = 1; i <= 50; i++) {
+            String email = "doctor" + i + "@clinic.vn";
+            String password = "Doctor@123";
+            String docHo = ho[i % ho.length];
+            String docDem = tenDem[(i * 3) % tenDem.length];
+            String docTen = ten[(i * 7) % ten.length];
+            String fullName = "BS. " + docHo + " " + docDem + " " + docTen;
+            String phone = "09" + String.format("%08d", 10000000 + i);
+            Specialty spec = specialties[i % specialties.length];
+            String degree = (i % 3 == 0) ? "Tiến sĩ Y khoa - CKII" : ((i % 2 == 0) ? "Thạc sĩ Y khoa - CKI" : "Bác sĩ chuyên khoa");
+            int expYears = 5 + (i % 20);
+            BigDecimal fee = BigDecimal.valueOf(150000 + (i % 6) * 50000);
+            createDoctorUser(email, password, fullName, phone, spec, degree, expYears, fee, true);
+        }
+
+        // 4. Patient Users & Profiles (5 Bệnh nhân mặc định)
         Patient pat1 = createPatientUser("bn.hoangminh@gmail.com", "Patient@123", "Hoàng Minh Đức", "0934567890", LocalDate.of(1990, 5, 15), "MALE", "123 Nguyễn Huệ, Quận 1, TP.HCM", "Tiền sử tăng huyết áp, dị ứng Penicillin");
         Patient pat2 = createPatientUser("bn.thuylinh@gmail.com", "Patient@123", "Nguyễn Thùy Linh", "0945678901", LocalDate.of(1995, 9, 22), "FEMALE", "456 Lê Lợi, Quận 3, TP.HCM", "Không có tiền sử đặc biệt");
         Patient pat3 = createPatientUser("patient@clinic", "user@2026", "Trần Thị Bình", "0911223344", LocalDate.of(1988, 3, 10), "FEMALE", "789 Điện Biên Phủ, Bình Thạnh, TP.HCM", "Tiền sử viêm dạ dày");
         Patient pat4 = createPatientUser("bn.tranvannam@gmail.com", "Patient@123", "Trần Văn Nam", "0977889900", LocalDate.of(2000, 11, 5), "MALE", "12 Lý Tự Trọng, Quận 1, TP.HCM", "Hen suyễn nhẹ");
         Patient pat5 = createPatientUser("bn.lethimai@gmail.com", "Patient@123", "Lê Thị Mai", "0988990011", LocalDate.of(1982, 1, 30), "FEMALE", "99 Võ Văn Tần, Quận 3, TP.HCM", "Tiểu đường tuýp 2");
+
+        // Sinh tự động thêm 40 bệnh nhân nữa
+        for (int i = 1; i <= 40; i++) {
+            String email = "patient" + i + "@gmail.com";
+            String password = "Patient@123";
+            String patHo = ho[(i + 5) % ho.length];
+            String patDem = tenDem[(i * 5) % tenDem.length];
+            String patTen = ten[(i * 9) % ten.length];
+            String fullName = patHo + " " + patDem + " " + patTen;
+            String phone = "08" + String.format("%08d", 20000000 + i);
+            LocalDate dob = LocalDate.of(1960 + (i % 45), 1 + (i % 12), 1 + (i % 28));
+            String gender = (i % 2 == 0) ? "MALE" : "FEMALE";
+            String address = (10 + i) + " Đường số " + (i % 10 + 1) + ", TP.HCM";
+            String medicalHistory = (i % 4 == 0) ? "Tiền sử dị ứng thuốc" : ((i % 5 == 0) ? "Tiền sử huyết áp cao" : "Không có tiền sử bệnh lý đặc biệt");
+            createPatientUser(email, password, fullName, phone, dob, gender, address, medicalHistory);
+        }
 
         // 5. Schedules (Ca làm việc / Slot khám)
         if (scheduleRepository.count() == 0) {

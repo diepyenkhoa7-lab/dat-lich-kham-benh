@@ -65,6 +65,7 @@ const Api = {
     register: (body) => Api.post('/auth/register', body, false),
     login: (body) => Api.post('/auth/login', body, false),
     refresh: (body) => Api.post('/auth/refresh', body, false),
+    changePassword: (body) => Api.post('/auth/change-password', body),
   },
 
   // ── Doctors ──
@@ -80,6 +81,8 @@ const Api = {
     slots: (id, date) => Api.get(`/doctors/${id}/slots?date=${date}`),
     createSlot: (body) => Api.post('/doctors/slots', body),
     toggleSlot: (id, avail) => Api.put(`/doctors/slots/${id}/toggle?available=${avail}`, null),
+    updateSlot: (id, body) => Api.put(`/doctors/slots/${id}`, body),
+    deleteSlot: (id) => Api.delete(`/doctors/slots/${id}`),
     myAppointments: () => Api.get('/doctors/my-appointments'),
     appointmentsByRange: (from, to) => Api.get(`/doctors/my-appointments/range?from=${from}&to=${to}`),
     updateAppointmentStatus: (id, status) => Api.put(`/doctors/appointments/${id}/status?status=${status}`, null),
@@ -96,6 +99,12 @@ const Api = {
     cancel: (id) => Api.delete(`/appointments/${id}/cancel`),
     get: (id) => Api.get(`/appointments/${id}`),
     mine: () => Api.get('/appointments/my-appointments'),
+  },
+
+  // ── Admin Appointments ──
+  adminAppointments: {
+    all: (page = 0, size = 20) => Api.get(`/admin/appointments?page=${page}&size=${size}`),
+    getPatientHistory: (patientId) => Api.get(`/admin/patients/${patientId}/appointments`),
   },
 
   // ── Admin ──
