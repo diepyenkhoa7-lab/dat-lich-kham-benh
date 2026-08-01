@@ -111,6 +111,9 @@ Tại thư mục gốc dự án:
 docker compose up -d
 .\run.bat
 ```
+```
+Hậu đẹp trai
+```
 
 ### Linux hoặc macOS
 
