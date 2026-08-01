@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
+import java.time.LocalDateTime;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -48,6 +49,14 @@ public class BookingServiceImpl implements BookingService {
         if (!Boolean.TRUE.equals(schedule.getIsAvailable())) {
             throw new BookingConflictException("Ca khám này đã được đặt bởi người khác hoặc không còn khả dụng");
         }
+        if (appointmentRepository.existsByScheduleId(schedule.getId())) {
+            throw new BookingConflictException("Ca khám này đã có lịch hẹn");
+        }
+
+        LocalDateTime slotTime = LocalDateTime.of(schedule.getWorkDate(), schedule.getStartTime());
+        if (!slotTime.isAfter(LocalDateTime.now())) {
+            throw new AppException("Không thể đặt ca khám đã qua");
+        }
 
         Patient patient = patientRepository.findById(patientUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("Hồ sơ bệnh nhân không tồn tại"));
@@ -55,6 +64,9 @@ public class BookingServiceImpl implements BookingService {
         Doctor doctor = schedule.getDoctor();
         if (doctor == null) {
             throw new ResourceNotFoundException("Bác sĩ phụ trách ca khám không tồn tại");
+        }
+        if (!Boolean.TRUE.equals(doctor.getIsApproved()) || !Boolean.TRUE.equals(doctor.getUser().getIsActive())) {
+            throw new AppException("Bác sĩ hiện không nhận lịch khám");
         }
 
         // 3. Tạo Appointment mới với booking_code ngẫu nhiên
@@ -92,7 +104,7 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional
     public void cancelBooking(Long appointmentId, Long patientUserId) {
-        Appointment appointment = appointmentRepository.findById(appointmentId)
+        Appointment appointment = appointmentRepository.findByIdForUpdate(appointmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Lịch hẹn không tồn tại"));
 
         if (!appointment.getPatient().getUserId().equals(patientUserId)) {
@@ -102,15 +114,31 @@ public class BookingServiceImpl implements BookingService {
         if ("CANCELLED".equals(appointment.getStatus())) {
             throw new AppException("Lịch hẹn này đã bị hủy trước đó");
         }
+        if ("COMPLETED".equals(appointment.getStatus())) {
+            throw new AppException("Không thể hủy lịch khám đã hoàn thành");
+        }
+        Schedule bookedSchedule = appointment.getSchedule();
+        LocalDateTime appointmentTime = LocalDateTime.of(bookedSchedule.getWorkDate(), bookedSchedule.getStartTime());
+        if (!appointmentTime.isAfter(LocalDateTime.now().plusHours(24))) {
+            throw new AppException("Chỉ có thể hủy lịch trước giờ khám ít nhất 24 giờ");
+        }
 
         appointment.setStatus("CANCELLED");
         appointmentRepository.save(appointment);
 
-        // Mở lại slot rảnh cho Schedule nếu appointment bị hủy
-        Schedule schedule = appointment.getSchedule();
+        // Quan hệ Appointment-Schedule là 1-1. Tạo slot thay thế để giữ lịch sử
+        // lịch đã hủy mà vẫn cho phép bệnh nhân khác đặt cùng khung giờ.
+        Schedule schedule = bookedSchedule;
         if (schedule != null) {
-            schedule.setIsAvailable(true);
+            schedule.setIsAvailable(false);
             scheduleRepository.save(schedule);
+            scheduleRepository.save(Schedule.builder()
+                    .doctor(schedule.getDoctor())
+                    .workDate(schedule.getWorkDate())
+                    .startTime(schedule.getStartTime())
+                    .endTime(schedule.getEndTime())
+                    .isAvailable(true)
+                    .build());
             redisCacheService.evictSlotCache(schedule.getDoctor().getUserId(), schedule.getWorkDate());
         }
 
@@ -124,9 +152,15 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     @Transactional(readOnly = true)
-    public AppointmentDto getBookingDetails(Long appointmentId) {
+    public AppointmentDto getBookingDetails(Long appointmentId, Long requesterUserId, String requesterRole) {
         Appointment appointment = appointmentRepository.findById(appointmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Lịch hẹn không tồn tại"));
+        boolean ownsAppointment = "ADMIN".equals(requesterRole)
+                || ("PATIENT".equals(requesterRole) && appointment.getPatient().getUserId().equals(requesterUserId))
+                || ("DOCTOR".equals(requesterRole) && appointment.getDoctor().getUserId().equals(requesterUserId));
+        if (!ownsAppointment) {
+            throw new AppException("Bạn không có quyền xem lịch hẹn này", org.springframework.http.HttpStatus.FORBIDDEN);
+        }
         return mapToDto(appointment);
     }
 
@@ -144,6 +178,38 @@ public class BookingServiceImpl implements BookingService {
         return appointmentRepository.findByDoctorUserId(doctorUserId).stream()
                 .map(this::mapToDto)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<AppointmentDto> getCompletedDoctorAppointments(Long doctorUserId) {
+        return appointmentRepository
+                .findByDoctorUserIdAndStatusOrderByScheduleWorkDateDesc(doctorUserId, "COMPLETED")
+                .stream().map(this::mapToDto).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<AppointmentDto> getDoctorAppointments(Long doctorUserId, java.time.LocalDate from,
+                                                       java.time.LocalDate to) {
+        if (from.isAfter(to)) {
+            throw new AppException("Ngày bắt đầu phải trước hoặc bằng ngày kết thúc");
+        }
+        return appointmentRepository.findByDoctorUserIdAndScheduleWorkDateBetween(doctorUserId, from, to)
+                .stream().map(this::mapToDto).toList();
+    }
+
+    @Override @Transactional
+    public void updateAppointmentStatus(Long appointmentId, Long doctorUserId, String status) {
+        Appointment appointment = appointmentRepository.findByIdForUpdate(appointmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Lịch hẹn không tồn tại"));
+        if (!appointment.getDoctor().getUserId().equals(doctorUserId)) throw new AppException("Bạn không quản lý lịch hẹn này");
+        if (!"COMPLETED".equals(status)) throw new AppException("Bác sĩ chỉ được chuyển lịch sang COMPLETED");
+        if (!"CONFIRMED".equals(appointment.getStatus())) throw new AppException("Chỉ có thể hoàn thành lịch đang xác nhận");
+        LocalDateTime appointmentTime = LocalDateTime.of(
+                appointment.getSchedule().getWorkDate(), appointment.getSchedule().getStartTime());
+        if (appointmentTime.isAfter(LocalDateTime.now())) throw new AppException("Chưa đến giờ khám");
+        appointment.setStatus(status); appointmentRepository.save(appointment);
     }
 
     private AppointmentDto mapToDto(Appointment appointment) {

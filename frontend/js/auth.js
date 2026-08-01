@@ -2,6 +2,9 @@
 // auth.js — Auth session manager
 // ============================================================
 const Auth = {
+  basePath() {
+    return window.location.pathname.startsWith('/frontend/') ? '/frontend' : '';
+  },
   getUser() {
     const u = localStorage.getItem('user');
     return u ? JSON.parse(u) : null;
@@ -21,13 +24,13 @@ const Auth = {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
-    window.location.href = '/frontend/login.html';
+    window.location.href = `${this.basePath()}/login.html`;
   },
 
   checkAuth(allowedRoles = []) {
     const user = this.getUser();
     if (!user) {
-      window.location.href = '/frontend/login.html';
+      window.location.href = `${this.basePath()}/login.html`;
       return null;
     }
     if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
@@ -40,10 +43,10 @@ const Auth = {
 
   redirectByRole(role) {
     switch (role) {
-      case 'ADMIN': window.location.href = '/frontend/admin/dashboard.html'; break;
-      case 'DOCTOR': window.location.href = '/frontend/doctor/dashboard.html'; break;
-      case 'PATIENT': window.location.href = '/frontend/patient/dashboard.html'; break;
-      default: window.location.href = '/frontend/index.html';
+      case 'ADMIN': window.location.href = `${this.basePath()}/admin/dashboard.html`; break;
+      case 'DOCTOR': window.location.href = `${this.basePath()}/doctor/dashboard.html`; break;
+      case 'PATIENT': window.location.href = `${this.basePath()}/patient/dashboard.html`; break;
+      default: window.location.href = `${this.basePath()}/index.html`;
     }
   }
 };

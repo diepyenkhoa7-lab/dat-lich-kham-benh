@@ -14,5 +14,5 @@ public interface MedicalRecordService {
      *
      * @param request DTO chứa appointmentId, diagnosis, doctorNotes
      */
-    void updateMedicalRecord(UpdateMedicalRecordDto request);
+    void updateMedicalRecord(Long doctorUserId, UpdateMedicalRecordDto request);
 }

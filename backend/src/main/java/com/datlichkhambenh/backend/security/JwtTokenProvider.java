@@ -65,6 +65,15 @@ public class JwtTokenProvider {
         return claims.get("role", String.class);
     }
 
+    public boolean isRefreshToken(String token) {
+        return "refresh".equals(extractClaims(token).get("type", String.class));
+    }
+
+    public boolean isAccessToken(String token) {
+        Claims claims = extractClaims(token);
+        return claims.get("type") == null && claims.get("role", String.class) != null;
+    }
+
     public boolean validateToken(String token) {
         try {
             extractClaims(token);

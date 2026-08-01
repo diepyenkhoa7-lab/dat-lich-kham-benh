@@ -4,6 +4,9 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.Past;
+import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.DecimalMin;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -19,21 +22,26 @@ public class RegisterRequestDto {
     private String password;
 
     @NotBlank(message = "Role không được để trống (PATIENT hoặc DOCTOR)")
-    @Pattern(regexp = "^(PATIENT|DOCTOR|ADMIN)$", message = "Role phải là PATIENT, DOCTOR hoặc ADMIN")
+    @Pattern(regexp = "^(PATIENT|DOCTOR)$", message = "Role phải là PATIENT hoặc DOCTOR")
     private String role;
 
     @NotBlank(message = "Họ và tên không được để trống")
     private String fullName;
 
+    @Pattern(regexp = "^$|^[0-9+]{9,15}$", message = "Số điện thoại không đúng định dạng")
     private String phone;
+    @Past(message = "Ngày sinh phải ở trong quá khứ")
     private LocalDate dob;
+    @Pattern(regexp = "^(MALE|FEMALE|OTHER)$", message = "Giới tính phải là MALE, FEMALE hoặc OTHER")
     private String gender;
     private String address;
     private String medicalHistory;
 
     private Long specialtyId;
     private String degree;
+    @PositiveOrZero(message = "Số năm kinh nghiệm không được âm")
     private Integer experienceYears;
+    @DecimalMin(value = "0", message = "Giá khám không được âm")
     private BigDecimal consultationFee;
 
     public RegisterRequestDto() {}

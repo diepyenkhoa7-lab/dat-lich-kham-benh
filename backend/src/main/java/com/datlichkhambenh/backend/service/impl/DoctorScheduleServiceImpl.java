@@ -8,6 +8,7 @@ import com.datlichkhambenh.backend.exception.AppException;
 import com.datlichkhambenh.backend.exception.ResourceNotFoundException;
 import com.datlichkhambenh.backend.repository.DoctorRepository;
 import com.datlichkhambenh.backend.repository.ScheduleRepository;
+import com.datlichkhambenh.backend.repository.AppointmentRepository;
 import com.datlichkhambenh.backend.service.DoctorScheduleService;
 import com.datlichkhambenh.backend.service.RedisCacheService;
 import lombok.RequiredArgsConstructor;
@@ -25,15 +26,26 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
     private final ScheduleRepository scheduleRepository;
     private final DoctorRepository doctorRepository;
     private final RedisCacheService redisCacheService;
+    private final AppointmentRepository appointmentRepository;
 
     @Override
     @Transactional
     public ScheduleDto createSlot(Long doctorUserId, CreateScheduleDto request) {
-        Doctor doctor = doctorRepository.findById(doctorUserId)
+        Doctor doctor = doctorRepository.findByIdForUpdate(doctorUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("Bác sĩ không tồn tại"));
 
         if (!Boolean.TRUE.equals(doctor.getIsApproved())) {
             throw new AppException("Tài khoản Bác sĩ chưa được Admin phê duyệt");
+        }
+        if (!request.getWorkDate().isAfter(LocalDate.now())) {
+            throw new AppException("Ngày làm việc phải sau ngày hiện tại");
+        }
+        if (!request.getEndTime().isAfter(request.getStartTime())) {
+            throw new AppException("Giờ kết thúc phải sau giờ bắt đầu");
+        }
+        if (scheduleRepository.existsByDoctorUserIdAndWorkDateAndStartTimeLessThanAndEndTimeGreaterThan(
+                doctorUserId, request.getWorkDate(), request.getEndTime(), request.getStartTime())) {
+            throw new AppException("Khung giờ bị trùng với ca làm việc đã đăng ký");
         }
 
         Schedule schedule = Schedule.builder()
@@ -55,6 +67,12 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
     @Override
     @Transactional(readOnly = true)
     public List<ScheduleDto> getAvailableSlots(Long doctorUserId, LocalDate date) {
+        if (date.isBefore(LocalDate.now())) {
+            return List.of();
+        }
+        Doctor doctor = doctorRepository.findById(doctorUserId)
+                .filter(d -> Boolean.TRUE.equals(d.getIsApproved()) && Boolean.TRUE.equals(d.getUser().getIsActive()))
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy bác sĩ đang hoạt động"));
         // Pattern Cache-Aside: 1. Đọc từ Redis trước
         List<ScheduleDto> cached = redisCacheService.getCachedAvailableSlots(doctorUserId, date);
         if (cached != null) {
@@ -72,10 +90,29 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<ScheduleDto> getDoctorSlots(Long doctorUserId) {
+        return scheduleRepository
+                .findByDoctorUserIdAndWorkDateGreaterThanEqualOrderByWorkDateAscStartTimeAsc(doctorUserId, LocalDate.now())
+                .stream().map(this::mapToDto).toList();
+    }
+
+    @Override
     @Transactional
-    public void toggleSlotAvailability(Long scheduleId, boolean available) {
-        Schedule schedule = scheduleRepository.findById(scheduleId)
+    public void toggleSlotAvailability(Long doctorUserId, Long scheduleId, boolean available) {
+        Schedule schedule = scheduleRepository.findByIdForUpdate(scheduleId)
                 .orElseThrow(() -> new ResourceNotFoundException("Ca khám không tồn tại"));
+
+        if (!schedule.getDoctor().getUserId().equals(doctorUserId)) {
+            throw new AppException("Bạn không quản lý ca khám này");
+        }
+        if (appointmentRepository.existsByScheduleId(scheduleId)) {
+            throw new AppException("Không thể thay đổi ca khám đã có lịch hẹn");
+        }
+        if (java.time.LocalDateTime.of(schedule.getWorkDate(), schedule.getStartTime())
+                .isBefore(java.time.LocalDateTime.now())) {
+            throw new AppException("Không thể thay đổi ca khám đã qua");
+        }
 
         schedule.setIsAvailable(available);
         scheduleRepository.save(schedule);
@@ -92,6 +129,7 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
                 .startTime(schedule.getStartTime())
                 .endTime(schedule.getEndTime())
                 .isAvailable(schedule.getIsAvailable())
+                .isBooked(appointmentRepository.existsByScheduleId(schedule.getId()))
                 .build();
     }
 }

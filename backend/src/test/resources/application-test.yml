@@ -30,6 +30,11 @@ spring:
     host: localhost
     port: 25
 
+  rabbitmq:
+    listener:
+      simple:
+        auto-startup: false
+
 app:
   jwt:
     secret: test-secret-key-for-unit-tests-only-must-be-256bit-long-enough

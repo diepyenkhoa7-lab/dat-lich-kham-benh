@@ -36,4 +36,12 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Long> {
 
     // Lấy tất cả slot của bác sĩ theo ngày (cho DoctorScheduleService)
     List<Schedule> findByDoctorUserIdAndWorkDate(Long doctorId, LocalDate workDate);
+
+    boolean existsByDoctorUserIdAndWorkDateAndStartTimeLessThanAndEndTimeGreaterThan(
+            Long doctorId, LocalDate workDate, java.time.LocalTime endTime, java.time.LocalTime startTime);
+
+    boolean existsByDoctorUserId(Long doctorId);
+
+    List<Schedule> findByDoctorUserIdAndWorkDateGreaterThanEqualOrderByWorkDateAscStartTimeAsc(
+            Long doctorId, LocalDate workDate);
 }

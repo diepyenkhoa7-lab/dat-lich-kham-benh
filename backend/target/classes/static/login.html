@@ -4,73 +4,65 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Đăng Nhập - DatLichKhamBenh</title>
-  <link rel="stylesheet" href="/css/style.css">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
   <div class="auth-container">
     <div class="auth-card">
       <div class="auth-logo">
-        <div class="logo-icon">⚡</div>
+        <div class="logo-icon">🏥</div>
         <h1>Đăng Nhập Hệ Thống</h1>
-        <p>Chọn tài khoản Demo hoặc nhập email/mật khẩu</p>
+        <p>Chọn tài khoản hoặc nhập thông tin đăng nhập</p>
       </div>
 
-      <div class="mb-3">
-        <label class="form-label">🔥 Đăng nhập nhanh (Tài khoản mẫu):</label>
-        <div class="grid grid-3 gap-1">
-          <button onclick="fillDemo('admin@clinic.vn', 'Admin@123')" class="btn btn-ghost btn-sm">🔑 Admin</button>
-          <button onclick="fillDemo('bs.nguyenvana@clinic.vn', 'Doctor@123')" class="btn btn-ghost btn-sm">👨‍⚕️ Bác Sĩ</button>
-          <button onclick="fillDemo('bn.hoangminh@gmail.com', 'Patient@123')" class="btn btn-ghost btn-sm">🤒 Bệnh Nhân</button>
-        </div>
-      </div>
-
-      <div class="auth-divider"><span>HOẶC</span></div>
+      <div id="error-alert" class="alert alert-error hidden"></div>
 
       <form id="login-form">
         <div class="form-group">
           <label class="form-label">Email</label>
-          <input type="email" id="email" class="form-control" placeholder="name@example.com" required>
+          <input type="email" id="email" class="form-control" placeholder="name@clinic.vn" required autocomplete="email">
         </div>
-
         <div class="form-group">
           <label class="form-label">Mật khẩu</label>
-          <input type="password" id="password" class="form-control" placeholder="••••••••" required>
+          <input type="password" id="password" class="form-control" placeholder="Mật khẩu" required autocomplete="current-password">
         </div>
-
-        <button type="submit" id="btn-submit" class="btn btn-primary w-full btn-lg mt-1">Đăng Nhập</button>
+        <button type="submit" class="btn btn-primary w-full mt-2 btn-lg" id="btn-submit">
+          Đăng Nhập
+        </button>
       </form>
 
       <div class="auth-footer">
-        Chưa có tài khoản? <a href="/register.html">Đăng ký ngay</a>
+        Chưa có tài khoản? <a href="register.html">Đăng ký Bệnh nhân</a>
       </div>
     </div>
   </div>
 
-  <script src="/js/api.js"></script>
-  <script src="/js/utils.js"></script>
-  <script src="/js/auth.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/auth.js"></script>
   <script>
-    function fillDemo(email, pass) {
-      document.getElementById('email').value = email;
-      document.getElementById('password').value = pass;
-    }
-
     document.getElementById('login-form').addEventListener('submit', async (e) => {
       e.preventDefault();
+      const errBox = document.getElementById('error-alert');
       const btn = document.getElementById('btn-submit');
+      errBox.classList.add('hidden');
       btn.disabled = true;
-      btn.innerHTML = '<div class="spinner"></div> Đang xử lý...';
+      btn.innerHTML = '<span class="spinner"></span> Đang đăng nhập...';
 
       try {
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
-
-        const res = await Api.auth.login({ email, password });
+        const res = await Api.auth.login({
+          email: document.getElementById('email').value,
+          password: document.getElementById('password').value
+        });
         Auth.setSession(res.data);
         Utils.showToast('Đăng nhập thành công!', 'success');
-        setTimeout(() => Auth.redirectByRole(res.data.role), 600);
+        setTimeout(() => Auth.redirectByRole(res.data.role), 500);
       } catch (err) {
-        Utils.showToast(err.message, 'error');
+        errBox.innerText = err.message;
+        errBox.classList.remove('hidden');
       } finally {
         btn.disabled = false;
         btn.innerHTML = 'Đăng Nhập';

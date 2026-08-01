@@ -8,6 +8,7 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Profile;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -18,6 +19,7 @@ import java.util.UUID;
 
 @Slf4j
 @Component
+@Profile("dev")
 @RequiredArgsConstructor
 public class DataInitializer implements ApplicationRunner {
 
@@ -28,6 +30,7 @@ public class DataInitializer implements ApplicationRunner {
     private final ScheduleRepository scheduleRepository;
     private final AppointmentRepository appointmentRepository;
     private final MedicalRecordRepository medicalRecordRepository;
+    private final MedicalServiceRepository medicalServiceRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -44,6 +47,11 @@ public class DataInitializer implements ApplicationRunner {
         Specialty s6 = createSpecialtyIfNotExists("Mắt", "Khám, đo thị lực và điều trị các bệnh lý nhãn khoa");
         Specialty s7 = createSpecialtyIfNotExists("Tai - Mũi - Họng", "Khám và điều trị các bệnh viêm xoang, viêm họng, viêm tai giữa");
         Specialty s8 = createSpecialtyIfNotExists("Cơ - Xương - Khớp", "Chẩn đoán và điều trị thoái hóa khớp, thoát vị đĩa đệm, chấn thương");
+        createServiceIfMissing("KHAM-TQ", "Khám sức khỏe tổng quát", s4, 350000, 45);
+        createServiceIfMissing("KHAM-TIM", "Khám chuyên khoa Tim mạch", s1, 400000, 30);
+        createServiceIfMissing("KHAM-NHI", "Khám Nhi khoa", s3, 250000, 30);
+        createServiceIfMissing("KHAM-DL", "Khám Da liễu", s5, 220000, 30);
+        createServiceIfMissing("KHAM-MAT", "Khám và đo thị lực", s6, 280000, 40);
 
         // 2. Admin Users
         createAdminUser("admin@clinic.vn", "Admin@123");
@@ -60,11 +68,11 @@ public class DataInitializer implements ApplicationRunner {
         Doctor doc8 = createDoctorUser("bs.ngobichn@clinic.vn", "Doctor@123", "BS. Ngô Bích Ngọc", "0966778899", s8, "Bác sĩ Chuyên khoa Xương Khớp", 5, BigDecimal.valueOf(200000), false); // Chưa duyệt
 
         // 4. Patient Users & Profiles (5 Bệnh nhân)
-        Patient pat1 = createPatientUser("bn.hoangminh@gmail.com", "Patient@123", "Hoàng Minh Đức", "0934567890", LocalDate.of(1990, 5, 15), "Nam", "123 Nguyễn Huệ, Quận 1, TP.HCM", "Tiền sử tăng huyết áp, dị ứng Penicillin");
-        Patient pat2 = createPatientUser("bn.thuylinh@gmail.com", "Patient@123", "Nguyễn Thùy Linh", "0945678901", LocalDate.of(1995, 9, 22), "Nữ", "456 Lê Lợi, Quận 3, TP.HCM", "Không có tiền sử đặc biệt");
-        Patient pat3 = createPatientUser("patient@clinic", "user@2026", "Trần Thị Bình", "0911223344", LocalDate.of(1988, 3, 10), "Nữ", "789 Điện Biên Phủ, Bình Thạnh, TP.HCM", "Tiền sử viêm dạ dày");
-        Patient pat4 = createPatientUser("bn.tranvannam@gmail.com", "Patient@123", "Trần Văn Nam", "0977889900", LocalDate.of(2000, 11, 5), "Nam", "12 Lý Tự Trọng, Quận 1, TP.HCM", "Hen suyễn nhẹ");
-        Patient pat5 = createPatientUser("bn.lethimai@gmail.com", "Patient@123", "Lê Thị Mai", "0988990011", LocalDate.of(1982, 1, 30), "Nữ", "99 Võ Văn Tần, Quận 3, TP.HCM", "Tiểu đường tuýp 2");
+        Patient pat1 = createPatientUser("bn.hoangminh@gmail.com", "Patient@123", "Hoàng Minh Đức", "0934567890", LocalDate.of(1990, 5, 15), "MALE", "123 Nguyễn Huệ, Quận 1, TP.HCM", "Tiền sử tăng huyết áp, dị ứng Penicillin");
+        Patient pat2 = createPatientUser("bn.thuylinh@gmail.com", "Patient@123", "Nguyễn Thùy Linh", "0945678901", LocalDate.of(1995, 9, 22), "FEMALE", "456 Lê Lợi, Quận 3, TP.HCM", "Không có tiền sử đặc biệt");
+        Patient pat3 = createPatientUser("patient@clinic", "user@2026", "Trần Thị Bình", "0911223344", LocalDate.of(1988, 3, 10), "FEMALE", "789 Điện Biên Phủ, Bình Thạnh, TP.HCM", "Tiền sử viêm dạ dày");
+        Patient pat4 = createPatientUser("bn.tranvannam@gmail.com", "Patient@123", "Trần Văn Nam", "0977889900", LocalDate.of(2000, 11, 5), "MALE", "12 Lý Tự Trọng, Quận 1, TP.HCM", "Hen suyễn nhẹ");
+        Patient pat5 = createPatientUser("bn.lethimai@gmail.com", "Patient@123", "Lê Thị Mai", "0988990011", LocalDate.of(1982, 1, 30), "FEMALE", "99 Võ Văn Tần, Quận 3, TP.HCM", "Tiểu đường tuýp 2");
 
         // 5. Schedules (Ca làm việc / Slot khám)
         if (scheduleRepository.count() == 0) {
@@ -152,8 +160,16 @@ public class DataInitializer implements ApplicationRunner {
                 .orElseGet(() -> specialtyRepository.save(Specialty.builder().name(name).description(description).build()));
     }
 
+    private void createServiceIfMissing(String code, String name, Specialty specialty, long price, int duration) {
+        if (medicalServiceRepository.existsByCodeIgnoreCase(code)) return;
+        medicalServiceRepository.save(MedicalService.builder().code(code).name(name)
+                .description("Dịch vụ khám và tư vấn bởi đội ngũ bác sĩ chuyên khoa.")
+                .specialty(specialty).defaultPrice(BigDecimal.valueOf(price))
+                .durationMinutes(duration).active(true).build());
+    }
+
     private void createAdminUser(String email, String password) {
-        if (userRepository.existsByEmail(email)) return;
+        if (userRepository.existsByEmailIgnoreCase(email)) return;
         User admin = User.builder()
                 .email(email)
                 .passwordHash(passwordEncoder.encode(password))
@@ -161,7 +177,7 @@ public class DataInitializer implements ApplicationRunner {
                 .isActive(true)
                 .build();
         userRepository.save(admin);
-        log.info("[Seed] Admin: {} / {}", email, password);
+        log.info("[Seed] Created development admin account: {}", email);
     }
 
     private Doctor createDoctorUser(String email, String password, String fullName, String phone, Specialty specialty, String degree, int expYears, BigDecimal fee, boolean approved) {
@@ -187,7 +203,7 @@ public class DataInitializer implements ApplicationRunner {
                             .isApproved(approved)
                             .build();
                     Doctor saved = doctorRepository.save(doctor);
-                    log.info("[Seed] Doctor: {} ({}) / {}", fullName, email, password);
+                    log.info("[Seed] Created development doctor account: {} ({})", fullName, email);
                     return saved;
                 });
     }
@@ -214,7 +230,7 @@ public class DataInitializer implements ApplicationRunner {
                             .medicalHistory(medicalHistory)
                             .build();
                     Patient saved = patientRepository.save(patient);
-                    log.info("[Seed] Patient: {} ({}) / {}", fullName, email, password);
+                    log.info("[Seed] Created development patient account: {} ({})", fullName, email);
                     return saved;
                 });
     }

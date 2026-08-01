@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # ─── MySQL Database ───────────────────────────────────────────────
   mysql:
@@ -24,6 +22,17 @@ services:
     volumes:
       - redis_data:/data
 
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: clinic_rabbitmq
+    restart: always
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
 volumes:
   mysql_data:
   redis_data:
+  rabbitmq_data:

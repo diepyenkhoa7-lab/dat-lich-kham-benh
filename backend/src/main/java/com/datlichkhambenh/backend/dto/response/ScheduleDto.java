@@ -19,4 +19,5 @@ public class ScheduleDto {
     private LocalTime startTime;
     private LocalTime endTime;
     private Boolean isAvailable;
+    private Boolean isBooked;
 }

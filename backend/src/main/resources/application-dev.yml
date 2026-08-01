@@ -1,30 +1,12 @@
-spring:
-  datasource:
-    url: ${DB_URL:jdbc:mysql://localhost:3306/clinic_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=Asia/Ho_Chi_Minh&allowPublicKeyRetrieval=true&characterEncoding=UTF-8}
-    username: ${DB_USERNAME:clinic_user}
-    password: ${DB_PASSWORD:clinic_pwd}
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    hikari:
-      maximum-pool-size: ${DB_POOL_SIZE:10}
-      minimum-idle: 2
-      connection-timeout: 30000
-  jpa:
-    hibernate:
-      ddl-auto: ${JPA_DDL_AUTO:update}
-    show-sql: ${JPA_SHOW_SQL:false}
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.MySQLDialect
-        format_sql: true
-    defer-datasource-initialization: true
-  data:
-    redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:}
-      timeout: 2000ms
-      lettuce:
-        pool:
-          max-active: 8
-          max-idle: 4
-          min-idle: 1
+app:
+  jwt:
+    secret: dev-only-secret-key-for-local-clinic-development-256-bit
+
+logging:
+  level:
+    com.datlichkhambenh: DEBUG
+
+management:
+  health:
+    mail:
+      enabled: false

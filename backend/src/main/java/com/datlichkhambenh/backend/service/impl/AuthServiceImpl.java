@@ -23,6 +23,9 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.http.HttpStatus;
+
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -39,13 +42,29 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public UserDto register(RegisterRequestDto request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
+        String email = normalizeEmail(request.getEmail());
+        if (userRepository.existsByEmailIgnoreCase(email)) {
             throw new AppException("Email đã tồn tại trên hệ thống");
         }
 
+        if (request.getPhone() != null && !request.getPhone().isBlank()
+                && (patientRepository.existsByPhone(request.getPhone()) || doctorRepository.existsByPhone(request.getPhone()))) {
+            throw new AppException("Số điện thoại đã tồn tại trên hệ thống");
+        }
+
         String role = request.getRole().toUpperCase();
+        if (!"PATIENT".equals(role) && !"DOCTOR".equals(role)) {
+            throw new AppException("Chỉ được đăng ký tài khoản PATIENT hoặc DOCTOR");
+        }
+        if (request.getPhone() == null || request.getPhone().isBlank()) {
+            throw new AppException("Số điện thoại không được để trống");
+        }
+        if ("DOCTOR".equals(role)
+                && (request.getExperienceYears() == null || request.getConsultationFee() == null)) {
+            throw new AppException("Bác sĩ phải cung cấp số năm kinh nghiệm và giá khám");
+        }
         User user = User.builder()
-                .email(request.getEmail())
+                .email(email)
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .role(role)
                 .isActive(true)
@@ -96,12 +115,15 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public LoginResponseDto login(LoginRequestDto request) {
+        String email = normalizeEmail(request.getEmail());
         authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+                new UsernamePasswordAuthenticationToken(email, request.getPassword())
         );
 
-        User user = userRepository.findByEmail(request.getEmail())
+        User user = userRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tài khoản"));
+
+        ensureAccountCanAuthenticate(user);
 
         String token = jwtTokenProvider.generateToken(user.getEmail(), user.getRole());
         String refreshToken = jwtTokenProvider.generateRefreshToken(user.getEmail());
@@ -119,13 +141,14 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public LoginResponseDto refreshToken(RefreshTokenRequestDto request) {
         String token = request.getRefreshToken();
-        if (!jwtTokenProvider.validateToken(token)) {
+        if (!jwtTokenProvider.validateToken(token) || !jwtTokenProvider.isRefreshToken(token)) {
             throw new AppException("Refresh Token không hợp lệ hoặc đã hết hạn");
         }
 
         String email = jwtTokenProvider.getEmailFromToken(token);
-        User user = userRepository.findByEmail(email)
+        User user = userRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
+        ensureAccountCanAuthenticate(user);
 
         String newToken = jwtTokenProvider.generateToken(user.getEmail(), user.getRole());
         String newRefreshToken = jwtTokenProvider.generateRefreshToken(user.getEmail());
@@ -138,5 +161,22 @@ public class AuthServiceImpl implements AuthService {
                 .email(user.getEmail())
                 .role(user.getRole())
                 .build();
+    }
+
+    private void ensureAccountCanAuthenticate(User user) {
+        if (!Boolean.TRUE.equals(user.getIsActive())) {
+            throw new AppException("Tài khoản đã bị khóa", HttpStatus.FORBIDDEN);
+        }
+        if ("DOCTOR".equals(user.getRole())) {
+            Doctor doctor = doctorRepository.findById(user.getId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy hồ sơ bác sĩ"));
+            if (!Boolean.TRUE.equals(doctor.getIsApproved())) {
+                throw new AppException("Tài khoản bác sĩ chưa được Admin phê duyệt", HttpStatus.FORBIDDEN);
+            }
+        }
+    }
+
+    private String normalizeEmail(String email) {
+        return email.trim().toLowerCase(Locale.ROOT);
     }
 }

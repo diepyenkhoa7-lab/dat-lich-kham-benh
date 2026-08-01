@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Hồ sơ cá nhân</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<div class="container-fluid"><div class="row">
+  <aside class="sidebar">
+    <h5 class="text-white mb-4"><i class="bi bi-heart-pulse me-2"></i>Bệnh nhân</h5>
+    <nav class="nav flex-column">
+      <a class="nav-link" href="dashboard.html">Tìm bác sĩ</a>
+      <a class="nav-link" href="appointments.html">Lịch hẹn</a>
+      <a class="nav-link" href="medical-records.html">Hồ sơ bệnh án</a>
+      <a class="nav-link active" href="profile.html">Thông tin cá nhân</a>
+    </nav>
+    <button onclick="Auth.logout()" class="btn btn-outline-light mt-auto">Đăng xuất</button>
+  </aside>
+  <main>
+    <div class="mb-4"><h2 class="fw-bold">Hồ sơ sức khỏe</h2></div>
+    <form id="profile-form" class="card p-4">
+      <div class="row g-3">
+        <div class="col-md-6"><label class="form-label">Họ và tên</label><input id="fullName" class="form-control" required minlength="2"></div>
+        <div class="col-md-6"><label class="form-label">Email</label><input id="email" class="form-control" disabled></div>
+        <div class="col-md-4"><label class="form-label">Ngày sinh</label><input id="dob" type="date" class="form-control"></div>
+        <div class="col-md-4"><label class="form-label">Giới tính</label><select id="gender" class="form-select"><option value="MALE">Nam</option><option value="FEMALE">Nữ</option><option value="OTHER">Khác</option></select></div>
+        <div class="col-md-4"><label class="form-label">Điện thoại</label><input id="phone" class="form-control" pattern="[0-9+]{9,15}" required></div>
+        <div class="col-12"><label class="form-label">Địa chỉ</label><input id="address" class="form-control"></div>
+        <div class="col-12"><label class="form-label">Tiền sử bệnh / Dị ứng thuốc</label><textarea id="medicalHistory" rows="4" class="form-control"></textarea></div>
+      </div>
+      <div class="mt-4"><button class="btn btn-primary"><i class="bi bi-check2-circle me-1"></i>Lưu thay đổi</button></div>
+    </form>
+  </main>
+</div></div>
+<script src="../js/api.js"></script><script src="../js/utils.js"></script><script src="../js/auth.js"></script>
+<script>
+Auth.checkAuth(['PATIENT']);
+const fields = ['fullName','email','dob','gender','phone','address','medicalHistory'];
+async function loadProfile() {
+  const profile = (await Api.patient.profile()).data;
+  fields.forEach(key => document.getElementById(key).value = profile[key] || '');
+}
+document.getElementById('profile-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  try {
+    await Api.patient.update({
+      fullName: fullName.value, dob: dob.value || null, gender: gender.value,
+      phone: phone.value, address: address.value, medicalHistory: medicalHistory.value
+    });
+    Utils.showToast('Đã cập nhật hồ sơ', 'success');
+  } catch (error) { Utils.showToast(error.message, 'danger'); }
+});
+loadProfile();
+</script>
+</body></html>

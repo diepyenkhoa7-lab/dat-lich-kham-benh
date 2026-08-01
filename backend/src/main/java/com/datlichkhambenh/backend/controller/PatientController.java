@@ -3,9 +3,10 @@ package com.datlichkhambenh.backend.controller;
 import com.datlichkhambenh.backend.dto.response.ApiResponseDto;
 import com.datlichkhambenh.backend.dto.response.MedicalRecordDto;
 import com.datlichkhambenh.backend.dto.response.PatientDto;
-import com.datlichkhambenh.backend.entity.User;
-import com.datlichkhambenh.backend.repository.UserRepository;
+import com.datlichkhambenh.backend.dto.request.UpdatePatientProfileDto;
+import com.datlichkhambenh.backend.service.CurrentUserService;
 import com.datlichkhambenh.backend.service.PatientService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -21,18 +22,12 @@ import java.util.List;
 public class PatientController {
 
     private final PatientService patientService;
-    private final UserRepository userRepository;
-
-    private Long getUserIdFromUserDetails(UserDetails userDetails) {
-        return userRepository.findByEmail(userDetails.getUsername())
-                .map(User::getId)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy thông tin tài khoản hiện tại"));
-    }
+    private final CurrentUserService currentUserService;
 
     @GetMapping("/me")
     @PreAuthorize("hasAuthority('PATIENT')")
     public ResponseEntity<ApiResponseDto<PatientDto>> getMyProfile(@AuthenticationPrincipal UserDetails userDetails) {
-        Long patientUserId = getUserIdFromUserDetails(userDetails);
+        Long patientUserId = currentUserService.getUserId(userDetails);
         PatientDto profile = patientService.getProfile(patientUserId);
         return ResponseEntity.ok(ApiResponseDto.success(profile));
     }
@@ -41,9 +36,9 @@ public class PatientController {
     @PreAuthorize("hasAuthority('PATIENT')")
     public ResponseEntity<ApiResponseDto<PatientDto>> updateMyProfile(
             @AuthenticationPrincipal UserDetails userDetails,
-            @RequestBody PatientDto request
+            @Valid @RequestBody UpdatePatientProfileDto request
     ) {
-        Long patientUserId = getUserIdFromUserDetails(userDetails);
+        Long patientUserId = currentUserService.getUserId(userDetails);
         PatientDto updated = patientService.updateProfile(patientUserId, request);
         return ResponseEntity.ok(ApiResponseDto.success(updated, "Cập nhật hồ sơ bệnh nhân thành công"));
     }
@@ -51,7 +46,7 @@ public class PatientController {
     @GetMapping("/me/medical-records")
     @PreAuthorize("hasAuthority('PATIENT')")
     public ResponseEntity<ApiResponseDto<List<MedicalRecordDto>>> getMyMedicalRecords(@AuthenticationPrincipal UserDetails userDetails) {
-        Long patientUserId = getUserIdFromUserDetails(userDetails);
+        Long patientUserId = currentUserService.getUserId(userDetails);
         List<MedicalRecordDto> records = patientService.getPatientMedicalRecords(patientUserId);
         return ResponseEntity.ok(ApiResponseDto.success(records));
     }

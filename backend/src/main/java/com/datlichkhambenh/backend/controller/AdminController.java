@@ -4,6 +4,12 @@ import com.datlichkhambenh.backend.dto.request.SpecialtyRequestDto;
 import com.datlichkhambenh.backend.dto.response.ApiResponseDto;
 import com.datlichkhambenh.backend.dto.response.DoctorDto;
 import com.datlichkhambenh.backend.dto.response.SpecialtyDto;
+import com.datlichkhambenh.backend.dto.response.UserDto;
+import com.datlichkhambenh.backend.dto.response.PatientDto;
+import com.datlichkhambenh.backend.dto.request.AdminCreateDoctorDto;
+import com.datlichkhambenh.backend.dto.request.AdminCreatePatientDto;
+import com.datlichkhambenh.backend.dto.request.UpdateDoctorProfileDto;
+import com.datlichkhambenh.backend.dto.request.UpdatePatientProfileDto;
 import com.datlichkhambenh.backend.service.AdminManagementService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.time.Year;
 
 @RestController
 @RequestMapping("/api/v1/admin")
@@ -58,5 +65,80 @@ public class AdminController {
     public ResponseEntity<ApiResponseDto<Map<String, Object>>> getSystemStats() {
         Map<String, Object> stats = adminManagementService.getSystemStats();
         return ResponseEntity.ok(ApiResponseDto.success(stats));
+    }
+
+    @GetMapping("/users")
+    public ResponseEntity<ApiResponseDto<List<UserDto>>> getUsers(@RequestParam(required = false) String role) {
+        return ResponseEntity.ok(ApiResponseDto.success(adminManagementService.getUsers(role)));
+    }
+
+    @PutMapping("/users/{id}/status")
+    public ResponseEntity<ApiResponseDto<Void>> setUserStatus(@PathVariable Long id, @RequestParam boolean active) {
+        adminManagementService.setUserActive(id, active);
+        return ResponseEntity.ok(ApiResponseDto.success(null, active ? "Đã kích hoạt tài khoản" : "Đã khóa tài khoản"));
+    }
+
+    @PutMapping("/specialties/{id}")
+    public ResponseEntity<ApiResponseDto<SpecialtyDto>> updateSpecialty(@PathVariable Long id, @Valid @RequestBody SpecialtyRequestDto request) {
+        return ResponseEntity.ok(ApiResponseDto.success(adminManagementService.updateSpecialty(id, request)));
+    }
+
+    @DeleteMapping("/specialties/{id}")
+    public ResponseEntity<ApiResponseDto<Void>> deleteSpecialty(@PathVariable Long id) {
+        adminManagementService.deleteSpecialty(id);
+        return ResponseEntity.ok(ApiResponseDto.success(null, "Đã xóa chuyên khoa"));
+    }
+
+    @GetMapping("/analytics")
+    public ResponseEntity<ApiResponseDto<Map<String, Object>>> analytics(
+            @RequestParam(required = false) Integer year) {
+        int selectedYear = year != null ? year : Year.now().getValue();
+        return ResponseEntity.ok(ApiResponseDto.success(adminManagementService.getAnalytics(selectedYear)));
+    }
+
+    @GetMapping("/doctors")
+    public ResponseEntity<ApiResponseDto<List<DoctorDto>>> getDoctors() {
+        return ResponseEntity.ok(ApiResponseDto.success(adminManagementService.getDoctors()));
+    }
+
+    @PostMapping("/doctors")
+    public ResponseEntity<ApiResponseDto<DoctorDto>> createDoctor(@Valid @RequestBody AdminCreateDoctorDto request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponseDto.success(adminManagementService.createDoctor(request), "Đã tạo bác sĩ"));
+    }
+
+    @PutMapping("/doctors/{id}")
+    public ResponseEntity<ApiResponseDto<DoctorDto>> updateDoctor(
+            @PathVariable Long id, @Valid @RequestBody UpdateDoctorProfileDto request) {
+        return ResponseEntity.ok(ApiResponseDto.success(adminManagementService.updateDoctor(id, request), "Đã cập nhật bác sĩ"));
+    }
+
+    @DeleteMapping("/doctors/{id}")
+    public ResponseEntity<ApiResponseDto<Void>> deleteDoctor(@PathVariable Long id) {
+        adminManagementService.deleteDoctor(id);
+        return ResponseEntity.ok(ApiResponseDto.success(null, "Đã xóa bác sĩ"));
+    }
+
+    @GetMapping("/patients")
+    public ResponseEntity<ApiResponseDto<List<PatientDto>>> getPatients() {
+        return ResponseEntity.ok(ApiResponseDto.success(adminManagementService.getPatients()));
+    }
+
+    @PostMapping("/patients")
+    public ResponseEntity<ApiResponseDto<PatientDto>> createPatient(@Valid @RequestBody AdminCreatePatientDto request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponseDto.success(adminManagementService.createPatient(request), "Đã tạo bệnh nhân"));
+    }
+
+    @PutMapping("/patients/{id}")
+    public ResponseEntity<ApiResponseDto<PatientDto>> updatePatient(
+            @PathVariable Long id, @Valid @RequestBody UpdatePatientProfileDto request) {
+        return ResponseEntity.ok(ApiResponseDto.success(adminManagementService.updatePatient(id, request), "Đã cập nhật bệnh nhân"));
+    }
+
+    @DeleteMapping("/patients/{id}")
+    public ResponseEntity<ApiResponseDto<Void>> deletePatient(@PathVariable Long id) {
+        adminManagementService.deletePatient(id);
+        return ResponseEntity.ok(ApiResponseDto.success(null, "Đã xóa bệnh nhân"));
     }
 }

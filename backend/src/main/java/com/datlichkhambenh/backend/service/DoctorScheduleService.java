@@ -9,5 +9,6 @@ import java.util.List;
 public interface DoctorScheduleService {
     ScheduleDto createSlot(Long doctorUserId, CreateScheduleDto request);
     List<ScheduleDto> getAvailableSlots(Long doctorUserId, LocalDate date);
-    void toggleSlotAvailability(Long scheduleId, boolean available);
+    List<ScheduleDto> getDoctorSlots(Long doctorUserId);
+    void toggleSlotAvailability(Long doctorUserId, Long scheduleId, boolean available);
 }

@@ -2,19 +2,17 @@ package com.datlichkhambenh.backend.controller;
 
 import com.datlichkhambenh.backend.dto.request.CreateScheduleDto;
 import com.datlichkhambenh.backend.dto.request.UpdateMedicalRecordDto;
+import com.datlichkhambenh.backend.dto.request.UpdateDoctorProfileDto;
 import com.datlichkhambenh.backend.dto.response.ApiResponseDto;
 import com.datlichkhambenh.backend.dto.response.AppointmentDto;
 import com.datlichkhambenh.backend.dto.response.DoctorDto;
 import com.datlichkhambenh.backend.dto.response.ScheduleDto;
-import com.datlichkhambenh.backend.entity.Doctor;
-import com.datlichkhambenh.backend.entity.User;
-import com.datlichkhambenh.backend.exception.ResourceNotFoundException;
-import com.datlichkhambenh.backend.repository.DoctorRepository;
-import com.datlichkhambenh.backend.repository.UserRepository;
+import com.datlichkhambenh.backend.dto.response.SpecialtyDto;
 import com.datlichkhambenh.backend.service.BookingService;
+import com.datlichkhambenh.backend.service.CurrentUserService;
+import com.datlichkhambenh.backend.service.DoctorService;
 import com.datlichkhambenh.backend.service.DoctorScheduleService;
 import com.datlichkhambenh.backend.service.MedicalRecordService;
-import com.datlichkhambenh.backend.service.RedisCacheService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -27,7 +25,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.math.BigDecimal;
 
 @RestController
 @RequestMapping("/api/v1/doctors")
@@ -35,68 +33,35 @@ import java.util.stream.Collectors;
 public class DoctorController {
 
     private final DoctorScheduleService doctorScheduleService;
-    private final RedisCacheService redisCacheService;
-    private final DoctorRepository doctorRepository;
-    private final UserRepository userRepository;
+    private final DoctorService doctorService;
+    private final CurrentUserService currentUserService;
     private final BookingService bookingService;
     private final MedicalRecordService medicalRecordService;
 
-    private Long getUserIdFromUserDetails(UserDetails userDetails) {
-        return userRepository.findByEmail(userDetails.getUsername())
-                .map(User::getId)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy thông tin tài khoản hiện tại"));
-    }
-
     @GetMapping
     public ResponseEntity<ApiResponseDto<List<DoctorDto>>> getApprovedDoctors(
-            @RequestParam(value = "specialtyId", required = false) Long specialtyId
+            @RequestParam(value = "specialtyId", required = false) Long specialtyId,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) BigDecimal minFee,
+            @RequestParam(required = false) BigDecimal maxFee,
+            @RequestParam(required = false) Integer minExperience,
+            @RequestParam(defaultValue = "name") String sort,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
     ) {
-        List<DoctorDto> cached = redisCacheService.getCachedDoctors(specialtyId);
-        if (cached != null) {
-            return ResponseEntity.ok(ApiResponseDto.success(cached));
-        }
-
-        List<Doctor> doctors = (specialtyId != null)
-                ? doctorRepository.findBySpecialtyIdAndIsApprovedTrue(specialtyId)
-                : doctorRepository.findByIsApprovedTrue();
-
-        List<DoctorDto> result = doctors.stream().map(d -> DoctorDto.builder()
-                .userId(d.getUserId())
-                .email(d.getUser().getEmail())
-                .fullName(d.getFullName())
-                .phone(d.getPhone())
-                .degree(d.getDegree())
-                .experienceYears(d.getExperienceYears())
-                .consultationFee(d.getConsultationFee())
-                .isApproved(d.getIsApproved())
-                .specialtyId(d.getSpecialty() != null ? d.getSpecialty().getId() : null)
-                .specialtyName(d.getSpecialty() != null ? d.getSpecialty().getName() : null)
-                .build()
-        ).collect(Collectors.toList());
-
-        redisCacheService.cacheDoctors(specialtyId, result);
+        List<DoctorDto> result = doctorService.searchApprovedDoctors(
+                specialtyId, keyword, minFee, maxFee, minExperience, sort, page, size);
         return ResponseEntity.ok(ApiResponseDto.success(result));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponseDto<DoctorDto>> getDoctorById(@PathVariable("id") Long id) {
-        Doctor d = doctorRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy bác sĩ"));
+        return ResponseEntity.ok(ApiResponseDto.success(doctorService.getApprovedDoctor(id)));
+    }
 
-        DoctorDto dto = DoctorDto.builder()
-                .userId(d.getUserId())
-                .email(d.getUser().getEmail())
-                .fullName(d.getFullName())
-                .phone(d.getPhone())
-                .degree(d.getDegree())
-                .experienceYears(d.getExperienceYears())
-                .consultationFee(d.getConsultationFee())
-                .isApproved(d.getIsApproved())
-                .specialtyId(d.getSpecialty() != null ? d.getSpecialty().getId() : null)
-                .specialtyName(d.getSpecialty() != null ? d.getSpecialty().getName() : null)
-                .build();
-
-        return ResponseEntity.ok(ApiResponseDto.success(dto));
+    @GetMapping("/specialties")
+    public ResponseEntity<ApiResponseDto<List<SpecialtyDto>>> getSpecialties() {
+        return ResponseEntity.ok(ApiResponseDto.success(doctorService.getSpecialties()));
     }
 
     @GetMapping("/{id}/slots")
@@ -114,7 +79,7 @@ public class DoctorController {
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @RequestBody CreateScheduleDto request
     ) {
-        Long doctorUserId = getUserIdFromUserDetails(userDetails);
+        Long doctorUserId = currentUserService.getUserId(userDetails);
         ScheduleDto slot = doctorScheduleService.createSlot(doctorUserId, request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponseDto.success(slot, "Tạo ca khám thành công"));
@@ -123,25 +88,75 @@ public class DoctorController {
     @PutMapping("/slots/{id}/toggle")
     @PreAuthorize("hasAuthority('DOCTOR')")
     public ResponseEntity<ApiResponseDto<Void>> toggleSlot(
+            @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable("id") Long scheduleId,
             @RequestParam("available") boolean available
     ) {
-        doctorScheduleService.toggleSlotAvailability(scheduleId, available);
+        doctorScheduleService.toggleSlotAvailability(currentUserService.getUserId(userDetails), scheduleId, available);
         return ResponseEntity.ok(ApiResponseDto.success(null, "Cập nhật trạng thái ca khám thành công"));
     }
 
     @GetMapping("/my-appointments")
     @PreAuthorize("hasAuthority('DOCTOR')")
     public ResponseEntity<ApiResponseDto<List<AppointmentDto>>> getMyDoctorAppointments(@AuthenticationPrincipal UserDetails userDetails) {
-        Long doctorUserId = getUserIdFromUserDetails(userDetails);
+        Long doctorUserId = currentUserService.getUserId(userDetails);
         List<AppointmentDto> appointments = bookingService.getDoctorAppointments(doctorUserId);
         return ResponseEntity.ok(ApiResponseDto.success(appointments));
     }
 
+    @GetMapping("/my-appointments/range")
+    @PreAuthorize("hasAuthority('DOCTOR')")
+    public ResponseEntity<ApiResponseDto<List<AppointmentDto>>> getAppointmentsByRange(
+            @AuthenticationPrincipal UserDetails userDetails, @RequestParam LocalDate from, @RequestParam LocalDate to) {
+        Long id = currentUserService.getUserId(userDetails);
+        List<AppointmentDto> result = bookingService.getDoctorAppointments(id, from, to);
+        return ResponseEntity.ok(ApiResponseDto.success(result));
+    }
+
+    @PutMapping("/appointments/{id}/status")
+    @PreAuthorize("hasAuthority('DOCTOR')")
+    public ResponseEntity<ApiResponseDto<Void>> updateAppointmentStatus(@AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long id, @RequestParam String status) {
+        bookingService.updateAppointmentStatus(id, currentUserService.getUserId(userDetails), status.toUpperCase());
+        return ResponseEntity.ok(ApiResponseDto.success(null, "Đã cập nhật trạng thái lịch hẹn"));
+    }
+
     @PostMapping("/medical-records")
     @PreAuthorize("hasAuthority('DOCTOR')")
-    public ResponseEntity<ApiResponseDto<Void>> updateMedicalRecord(@Valid @RequestBody UpdateMedicalRecordDto request) {
-        medicalRecordService.updateMedicalRecord(request);
+    public ResponseEntity<ApiResponseDto<Void>> updateMedicalRecord(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @Valid @RequestBody UpdateMedicalRecordDto request) {
+        medicalRecordService.updateMedicalRecord(currentUserService.getUserId(userDetails), request);
         return ResponseEntity.ok(ApiResponseDto.success(null, "Cập nhật kết quả chẩn đoán bệnh thành công"));
+    }
+
+    @GetMapping("/me")
+    @PreAuthorize("hasAuthority('DOCTOR')")
+    public ResponseEntity<ApiResponseDto<DoctorDto>> getMyProfile(@AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(ApiResponseDto.success(doctorService.getProfile(currentUserService.getUserId(userDetails))));
+    }
+
+    @PutMapping("/me")
+    @PreAuthorize("hasAuthority('DOCTOR')")
+    public ResponseEntity<ApiResponseDto<DoctorDto>> updateMyProfile(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @Valid @RequestBody UpdateDoctorProfileDto request) {
+        DoctorDto updated = doctorService.updateProfile(currentUserService.getUserId(userDetails), request);
+        return ResponseEntity.ok(ApiResponseDto.success(updated, "Cập nhật hồ sơ bác sĩ thành công"));
+    }
+
+    @GetMapping("/my-slots")
+    @PreAuthorize("hasAuthority('DOCTOR')")
+    public ResponseEntity<ApiResponseDto<List<ScheduleDto>>> getMySlots(@AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(ApiResponseDto.success(
+                doctorScheduleService.getDoctorSlots(currentUserService.getUserId(userDetails))));
+    }
+
+    @GetMapping("/my-patients/completed")
+    @PreAuthorize("hasAuthority('DOCTOR')")
+    public ResponseEntity<ApiResponseDto<List<AppointmentDto>>> getCompletedPatients(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(ApiResponseDto.success(
+                bookingService.getCompletedDoctorAppointments(currentUserService.getUserId(userDetails))));
     }
 }

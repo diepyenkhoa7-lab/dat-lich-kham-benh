@@ -1,7 +1,8 @@
 // ============================================================
-// api.js — HTTP client với relative path & auto Bearer token
+// api.js — HTTP client với auto Bearer token & error handling
 // ============================================================
-const API_BASE = '/api/v1';
+const API_BASE = window.CLINIC_API_BASE
+  || (window.location.port === '8080' ? '/api/v1' : 'http://localhost:8080/api/v1');
 
 const Api = {
   _getToken() { return localStorage.getItem('accessToken'); },
@@ -20,6 +21,7 @@ const Api = {
       const data = await res.json().catch(() => ({}));
 
       if (res.status === 401) {
+        // Thử refresh token
         const refreshed = await this._tryRefresh();
         if (refreshed) return this._request(method, path, body, auth);
         Auth.logout();
@@ -31,7 +33,7 @@ const Api = {
       }
       return data;
     } catch (err) {
-      if (err.name === 'TypeError') throw new Error('Không thể kết nối đến server.');
+      if (err.name === 'TypeError') throw new Error('Không thể kết nối đến server. Kiểm tra backend đang chạy chưa?');
       throw err;
     }
   },
@@ -55,6 +57,7 @@ const Api = {
   get: (path, auth = true) => Api._request('GET', path, null, auth),
   post: (path, body, auth = true) => Api._request('POST', path, body, auth),
   put: (path, body, auth = true) => Api._request('PUT', path, body, auth),
+  patch: (path, body, auth = true) => Api._request('PATCH', path, body, auth),
   delete: (path, auth = true) => Api._request('DELETE', path, null, auth),
 
   // ── Auth ──
@@ -66,13 +69,25 @@ const Api = {
 
   // ── Doctors ──
   doctors: {
-    list: (specialtyId) => Api.get(`/doctors${specialtyId ? `?specialtyId=${specialtyId}` : ''}`),
+    list: (specialtyId, keyword = '') => {
+      const params = new URLSearchParams();
+      if (specialtyId) params.set('specialtyId', specialtyId);
+      if (keyword) params.set('keyword', keyword);
+      return Api.get(`/doctors${params.size ? `?${params}` : ''}`);
+    },
     get: (id) => Api.get(`/doctors/${id}`),
+    specialties: () => Api.get('/doctors/specialties', false),
     slots: (id, date) => Api.get(`/doctors/${id}/slots?date=${date}`),
     createSlot: (body) => Api.post('/doctors/slots', body),
     toggleSlot: (id, avail) => Api.put(`/doctors/slots/${id}/toggle?available=${avail}`, null),
     myAppointments: () => Api.get('/doctors/my-appointments'),
+    appointmentsByRange: (from, to) => Api.get(`/doctors/my-appointments/range?from=${from}&to=${to}`),
+    updateAppointmentStatus: (id, status) => Api.put(`/doctors/appointments/${id}/status?status=${status}`, null),
     updateMedRecord: (body) => Api.post('/doctors/medical-records', body),
+    profile: () => Api.get('/doctors/me'),
+    updateProfile: (body) => Api.put('/doctors/me', body),
+    mySlots: () => Api.get('/doctors/my-slots'),
+    completedPatients: () => Api.get('/doctors/my-patients/completed'),
   },
 
   // ── Appointments ──
@@ -90,12 +105,30 @@ const Api = {
     rejectDoctor: (id) => Api.put(`/admin/doctors/${id}/reject`, null),
     specialties: () => Api.get('/admin/specialties'),
     createSpecialty: (body) => Api.post('/admin/specialties', body),
+    updateSpecialty: (id, body) => Api.put(`/admin/specialties/${id}`, body),
+    deleteSpecialty: (id) => Api.delete(`/admin/specialties/${id}`),
+    users: (role = '') => Api.get(`/admin/users${role ? `?role=${role}` : ''}`),
+    setUserStatus: (id, active) => Api.put(`/admin/users/${id}/status?active=${active}`, null),
     stats: () => Api.get('/admin/stats'),
+    analytics: (year) => Api.get(`/admin/analytics?year=${year}`),
+    doctors: () => Api.get('/admin/doctors'),
+    createDoctor: (body) => Api.post('/admin/doctors', body),
+    updateDoctor: (id, body) => Api.put(`/admin/doctors/${id}`, body),
+    deleteDoctor: (id) => Api.delete(`/admin/doctors/${id}`),
+    patients: () => Api.get('/admin/patients'),
+    createPatient: (body) => Api.post('/admin/patients', body),
+    updatePatient: (id, body) => Api.put(`/admin/patients/${id}`, body),
+    deletePatient: (id) => Api.delete(`/admin/patients/${id}`),
+    services: () => Api.get('/services/admin'),
+    createService: (body) => Api.post('/services', body),
+    updateService: (id, body) => Api.put(`/services/${id}`, body),
+    deleteService: (id) => Api.delete(`/services/${id}`),
   },
 
   // ── Patient ──
   patient: {
     profile: () => Api.get('/patients/me'),
     update: (body) => Api.put('/patients/me', body),
+    medicalRecords: () => Api.get('/patients/me/medical-records'),
   },
 };

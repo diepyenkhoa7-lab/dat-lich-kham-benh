@@ -17,6 +17,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.http.HttpMethod;
 
 @Configuration
 @EnableWebSecurity
@@ -41,6 +42,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // 1. Công khai các API Auth & Actuator
                 .requestMatchers("/api/v1/auth/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/doctors/specialties").permitAll()
                 .requestMatchers("/actuator/**").permitAll()
 
                 // 2. Yêu cầu xác thực JWT cho tất cả REST API ngoại trừ auth
@@ -49,6 +51,9 @@ public class SecurityConfig {
                 // 3. Công khai toàn bộ Giao diện tĩnh (HTML/CSS/JS/Images) ở mọi thư mục (root, patient, doctor, admin...)
                 .anyRequest().permitAll()
             )
+            .exceptionHandling(errors -> errors
+                .authenticationEntryPoint((request, response, exception) -> response.sendError(401))
+                .accessDeniedHandler((request, response, exception) -> response.sendError(403)))
             .authenticationProvider(authenticationProvider())
             .addFilterBefore(jwtTokenFilter, UsernamePasswordAuthenticationFilter.class);
 
