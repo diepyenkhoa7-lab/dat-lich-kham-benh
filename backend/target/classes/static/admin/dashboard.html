@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - DatLichKhamBenh</title>
+  <!-- Bootstrap 5 & Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    body { background-color: #f8fafc; color: #1e293b; }
+    .sidebar { background: #0f172a; color: #fff; min-height: 100vh; }
+    .sidebar .nav-link { color: #94a3b8; border-radius: 10px; margin-bottom: 4px; padding: 10px 16px; }
+    .sidebar .nav-link:hover, .sidebar .nav-link.active { background: #1e293b; color: #38bdf8; }
+    .stat-card { border-radius: 16px; border: 1px solid #e2e8f0; background: #ffffff; transition: all 0.25s ease; }
+    .stat-card:hover { transform: translateY(-4px); box-shadow: 0 10px 25px rgba(0,0,0,0.08); }
+    .icon-box { width: 56px; height: 56px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.75rem; }
+  </style>
+</head>
+<body>
+
+  <div class="container-fluid">
+    <div class="row">
+      <!-- Sidebar Navigation -->
+      <aside class="col-md-3 col-lg-2 d-md-block sidebar collapse p-3">
+        <div class="d-flex align-items-center gap-2 mb-4 px-2">
+          <div class="bg-danger text-white rounded-3 p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+            <i class="bi bi-shield-lock-fill fs-4"></i>
+          </div>
+          <div>
+            <h6 class="fw-bold mb-0 text-white">Quản Trị Viên</h6>
+            <small class="text-secondary">DatLichKhamBenh</small>
+          </div>
+        </div>
+
+        <ul class="nav nav-pills flex-column mb-auto">
+          <li class="nav-item">
+            <a href="dashboard.html" class="nav-link active d-flex align-items-center gap-2">
+              <i class="bi bi-speedometer2 fs-5"></i> Thống Kê Tổng Quan
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="doctors.html" class="nav-link d-flex align-items-center gap-2">
+              <i class="bi bi-person-check fs-5"></i> Duyệt Bác Sĩ Mới
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="specialties.html" class="nav-link d-flex align-items-center gap-2">
+              <i class="bi bi-hospital fs-5"></i> Quản Lý Chuyên Khoa
+            </a>
+          </li>
+        </ul>
+
+        <hr class="text-secondary my-4">
+        <div class="d-flex align-items-center justify-content-between px-2">
+          <div class="fw-semibold text-white small"><i class="bi bi-person-circle me-1"></i>Admin</div>
+          <button onclick="Auth.logout()" class="btn btn-outline-danger btn-sm border-0" title="Đăng xuất">
+            <i class="bi bi-box-arrow-right fs-5"></i>
+          </button>
+        </div>
+      </aside>
+
+      <!-- Main Content -->
+      <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <div>
+            <h2 class="fw-bold text-dark mb-1"><i class="bi bi-graph-up-arrow text-primary me-2"></i>Thống Kê Hệ Thống</h2>
+            <p class="text-muted mb-0">Tổng quan dữ liệu và hoạt động toàn bộ phòng khám theo thời gian thực</p>
+          </div>
+        </div>
+
+        <!-- Quick Stat Cards Grid -->
+        <div class="row g-4 mb-4">
+          <!-- Active Doctors -->
+          <div class="col-md-6 col-xl-3">
+            <div class="card stat-card p-4 shadow-sm h-100">
+              <div class="d-flex align-items-center justify-content-between">
+                <div>
+                  <small class="text-muted fw-semibold text-uppercase d-block mb-1">Bác sĩ hoạt động</small>
+                  <h3 class="fw-bold text-dark mb-0" id="stat-doctors">
+                    <span class="spinner-border spinner-border-sm text-primary"></span>
+                  </h3>
+                </div>
+                <div class="icon-box bg-primary-subtle text-primary">
+                  <i class="bi bi-heart-pulse-fill"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Total Patients -->
+          <div class="col-md-6 col-xl-3">
+            <div class="card stat-card p-4 shadow-sm h-100">
+              <div class="d-flex align-items-center justify-content-between">
+                <div>
+                  <small class="text-muted fw-semibold text-uppercase d-block mb-1">Bệnh nhân hệ thống</small>
+                  <h3 class="fw-bold text-dark mb-0" id="stat-patients">
+                    <span class="spinner-border spinner-border-sm text-success"></span>
+                  </h3>
+                </div>
+                <div class="icon-box bg-success-subtle text-success">
+                  <i class="bi bi-people-fill"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Total Appointments -->
+          <div class="col-md-6 col-xl-3">
+            <div class="card stat-card p-4 shadow-sm h-100">
+              <div class="d-flex align-items-center justify-content-between">
+                <div>
+                  <small class="text-muted fw-semibold text-uppercase d-block mb-1">Tổng ca khám đã đặt</small>
+                  <h3 class="fw-bold text-dark mb-0" id="stat-appointments">
+                    <span class="spinner-border spinner-border-sm text-warning"></span>
+                  </h3>
+                </div>
+                <div class="icon-box bg-warning-subtle text-warning">
+                  <i class="bi bi-calendar-check-fill"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Revenue -->
+          <div class="col-md-6 col-xl-3">
+            <div class="card stat-card p-4 shadow-sm h-100">
+              <div class="d-flex align-items-center justify-content-between">
+                <div>
+                  <small class="text-muted fw-semibold text-uppercase d-block mb-1">Doanh thu dự tính</small>
+                  <h3 class="fw-bold text-success mb-0" id="stat-revenue">
+                    <span class="spinner-border spinner-border-sm text-danger"></span>
+                  </h3>
+                </div>
+                <div class="icon-box bg-danger-subtle text-danger">
+                  <i class="bi bi-cash-stack"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- System Quick Links / Info Card -->
+        <div class="row g-4">
+          <div class="col-md-6">
+            <div class="card border-0 shadow-sm rounded-4 p-4 h-100 bg-white">
+              <h5 class="fw-bold text-dark mb-3"><i class="bi bi-person-badge text-primary me-2"></i>Quản lý Bác Sĩ Mới</h5>
+              <p class="text-muted">Kiểm tra danh sách và xem hồ sơ bác sĩ vừa đăng ký để thực hiện duyệt tài khoản vào hệ thống.</p>
+              <div class="mt-auto pt-2">
+                <a href="doctors.html" class="btn btn-primary rounded-pill fw-semibold">
+                  <i class="bi bi-arrow-right-circle me-1"></i> Đi tới trang duyệt Bác sĩ
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <div class="card border-0 shadow-sm rounded-4 p-4 h-100 bg-white">
+              <h5 class="fw-bold text-dark mb-3"><i class="bi bi-hospital text-success me-2"></i>Quản lý Danh mục Chuyên khoa</h5>
+              <p class="text-muted">Cập nhật và thêm mới các chuyên khoa khám chữa bệnh trong toàn bộ hệ thống phòng khám.</p>
+              <div class="mt-auto pt-2">
+                <a href="specialties.html" class="btn btn-outline-success rounded-pill fw-semibold">
+                  <i class="bi bi-plus-circle me-1"></i> Quản lý Chuyên khoa
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/utils.js"></script>
+  <script src="../js/auth.js"></script>
+  <script>
+    Auth.checkAuth(['ADMIN']);
+
+    async function loadStats() {
+      try {
+        const res = await Api.admin.stats();
+        const stats = res.data || {};
+        document.getElementById('stat-doctors').innerText = stats.totalDoctors || 0;
+        document.getElementById('stat-patients').innerText = stats.totalPatients || 0;
+        document.getElementById('stat-appointments').innerText = stats.totalAppointments || 0;
+        document.getElementById('stat-revenue').innerText = Utils.formatCurrency(stats.totalRevenue || 0);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    loadStats();
+  </script>
+</body>
+</html>
