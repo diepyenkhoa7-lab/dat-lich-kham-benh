@@ -112,7 +112,7 @@ docker compose up -d
 .\run.bat
 ```
 ```
-Hậu đẹp trai
+Võ Minh Hậu Đẹp Trai
 ```
 
 ### Linux hoặc macOS
